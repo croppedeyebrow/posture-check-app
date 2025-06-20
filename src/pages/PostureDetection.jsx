@@ -1,125 +1,94 @@
-import React, { useEffect, useRef, useState } from "react";
-import styled from "styled-components";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import Webcam from "react-webcam";
 import useStore from "../store/useStore";
 import { Pose } from "@mediapipe/pose";
-import { Camera } from "@mediapipe/camera_utils";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
-
-const DetectionContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem;
-`;
-
-const VideoContainer = styled.div`
-  position: relative;
-  width: 640px;
-  height: 480px;
-  margin-bottom: 1rem;
-`;
-
-const Video = styled.video`
-  width: 100%;
-  height: 100%;
-  background-color: #000;
-`;
-
-const Canvas = styled.canvas`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-`;
-
-const StatusText = styled.p`
-  font-size: 1.2rem;
-  color: ${({ theme, isGood }) =>
-    isGood ? theme.colors.success : theme.colors.error};
-  margin: 1rem 0;
-`;
-
-const PostureInfo = styled.div`
-  background-color: ${({ theme }) => theme.colors.background};
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-  min-width: 300px;
-`;
+import {
+  DetectionContainer,
+  VideoContainer,
+  StyledWebcam,
+  Canvas,
+  ControlsContainer,
+  StartButton,
+  StopButton,
+  StatusText,
+  PostureInfo,
+} from "../styles/PostureDetection.styles";
 
 const PostureDetection = () => {
-  const videoRef = useRef(null);
+  const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [isDetecting, setIsDetecting] = useState(false);
+  const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [postureStatus, setPostureStatus] = useState("감지 대기 중");
   const [postureData, setPostureData] = useState(null);
   const { setPosture } = useStore();
 
   const poseRef = useRef(null);
-  const cameraRef = useRef(null);
+  const animationFrameRef = useRef(null);
 
-  useEffect(() => {
-    const initializePose = async () => {
-      poseRef.current = new Pose({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-        },
+  const videoConstraints = {
+    width: 640,
+    height: 480,
+    facingMode: "user",
+  };
+
+  const initializePose = useCallback(async () => {
+    poseRef.current = new Pose({
+      locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+      },
+    });
+
+    poseRef.current.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      smoothSegmentation: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+
+    poseRef.current.onResults(onPoseResults);
+  }, []);
+
+  const onPoseResults = useCallback((results) => {
+    const canvasCtx = canvasRef.current.getContext("2d");
+    canvasCtx.save();
+    canvasCtx.clearRect(
+      0,
+      0,
+      canvasRef.current.width,
+      canvasRef.current.height
+    );
+    canvasCtx.drawImage(
+      results.image,
+      0,
+      0,
+      canvasRef.current.width,
+      canvasRef.current.height
+    );
+
+    if (results.poseLandmarks) {
+      drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS, {
+        color: "#00FF00",
+        lineWidth: 2,
+      });
+      drawLandmarks(canvasCtx, results.poseLandmarks, {
+        color: "#FF0000",
+        lineWidth: 1,
+        radius: 3,
       });
 
-      poseRef.current.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        smoothSegmentation: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
+      // 자세 분석
+      analyzePosture(results.poseLandmarks);
+    }
 
-      poseRef.current.onResults(onPoseResults);
-    };
+    canvasCtx.restore();
+  }, []);
 
-    const onPoseResults = (results) => {
-      const canvasCtx = canvasRef.current.getContext("2d");
-      canvasCtx.save();
-      canvasCtx.clearRect(
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height
-      );
-      canvasCtx.drawImage(
-        results.image,
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height
-      );
-
-      if (results.poseLandmarks) {
-        drawConnectors(
-          canvasCtx,
-          results.poseLandmarks,
-          Pose.POSE_CONNECTIONS,
-          {
-            color: "#00FF00",
-            lineWidth: 2,
-          }
-        );
-        drawLandmarks(canvasCtx, results.poseLandmarks, {
-          color: "#FF0000",
-          lineWidth: 1,
-          radius: 3,
-        });
-
-        // 자세 분석
-        analyzePosture(results.poseLandmarks);
-      }
-
-      canvasCtx.restore();
-    };
-
-    const analyzePosture = (landmarks) => {
+  const analyzePosture = useCallback(
+    (landmarks) => {
       if (!landmarks) return;
 
       // 어깨 각도 계산 (좌우 어깨)
@@ -179,49 +148,89 @@ const PostureDetection = () => {
         shoulderSlope,
         timestamp: Date.now(),
       });
-    };
+    },
+    [setPosture]
+  );
 
-    const startCamera = async () => {
-      try {
-        await initializePose();
+  const startDetection = useCallback(async () => {
+    try {
+      await initializePose();
+      setIsDetecting(true);
+      setIsWebcamActive(true);
+    } catch (error) {
+      console.error("자세 감지 시작 오류:", error);
+      setPostureStatus("초기화 오류");
+    }
+  }, [initializePose]);
 
-        cameraRef.current = new Camera(videoRef.current, {
-          onFrame: async () => {
-            if (videoRef.current) {
-              await poseRef.current.send({ image: videoRef.current });
-            }
-          },
-          width: 640,
-          height: 480,
-        });
+  const stopDetection = useCallback(() => {
+    setIsDetecting(false);
+    setIsWebcamActive(false);
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+  }, []);
 
-        await cameraRef.current.start();
-        setIsDetecting(true);
-      } catch (error) {
-        console.error("카메라 시작 오류:", error);
-        setPostureStatus("카메라 오류");
+  const processFrame = useCallback(async () => {
+    if (webcamRef.current && poseRef.current && isDetecting) {
+      const video = webcamRef.current.video;
+      if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+        await poseRef.current.send({ image: video });
       }
-    };
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+    }
+  }, [isDetecting]);
 
-    startCamera();
+  useEffect(() => {
+    if (isDetecting) {
+      processFrame();
+    }
 
     return () => {
-      if (cameraRef.current) {
-        cameraRef.current.stop();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
+    };
+  }, [isDetecting, processFrame]);
+
+  useEffect(() => {
+    return () => {
       if (poseRef.current) {
         poseRef.current.close();
       }
     };
-  }, [setPosture]);
+  }, []);
 
   return (
     <DetectionContainer>
       <h1>자세 감지</h1>
+
+      <ControlsContainer>
+        {!isDetecting ? (
+          <StartButton onClick={startDetection}>자세 감지 시작</StartButton>
+        ) : (
+          <StopButton onClick={stopDetection}>자세 감지 중지</StopButton>
+        )}
+      </ControlsContainer>
+
       <VideoContainer>
-        <Video ref={videoRef} autoPlay playsInline />
+        {isWebcamActive && (
+          <StyledWebcam
+            ref={webcamRef}
+            audio={false}
+            videoConstraints={videoConstraints}
+            mirrored={true}
+            onUserMedia={() => console.log("웹캠 시작됨")}
+            onUserMediaError={(error) => {
+              console.error("웹캠 오류:", error);
+              setIsWebcamActive(false);
+              setIsDetecting(false);
+            }}
+          />
+        )}
         <Canvas ref={canvasRef} width={640} height={480} />
       </VideoContainer>
+
       <StatusText isGood={postureStatus === "좋음"}>
         {isDetecting ? `자세 상태: ${postureStatus}` : "자세 감지 준비 중..."}
       </StatusText>
