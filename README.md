@@ -38,10 +38,18 @@
 - Zustand (상태관리)
 - MediaPipe Pose (자세 감지)
 
+### First Deployment
+
+- Vercel
+
 ### Backend (예정)
 
 - FastAPI
 - MySQL
+
+### Second Deployment
+
+- AWS EC2
 
 ## 프로젝트 구조
 
@@ -57,6 +65,8 @@ src/
 ├── styles/         # 전역 스타일 및 테마
 └── utils/          # 유틸리티 함수
 ```
+
+https://velog.io/@c_d_c/%EC%9B%B9%EC%95%B1-FullStack-%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%B7%A8%EC%97%85-%EC%A4%80%EB%B9%84-%EC%9D%BC%EA%B8%B0-%EA%B0%9C%EB%B0%9C-%ED%8F%AC%ED%8F%B4%EC%9D%84-%EC%9C%84%ED%95%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EA%B5%AC%EC%84%B1-%EC%8B%A4%EC%8B%9C%EA%B0%84-%EC%9E%90%EC%84%B8-%EA%B5%90%EC%A0%95-%EC%95%B1-%EB%A7%8C%EB%93%A4%EA%B8%B0...ing
 
 ## 시작하기
 
