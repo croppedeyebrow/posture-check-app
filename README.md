@@ -42,6 +42,8 @@
 
 - Vercel
 
+https://posture-check-app.vercel.app/
+
 ### Backend (예정)
 
 - FastAPI
