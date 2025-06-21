@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import * as XLSX from "xlsx";
 import {
   DataContainer,
   Header,
@@ -15,6 +16,7 @@ import {
   FilterButton,
   EmptyState,
   ExportButton,
+  ExcelExportButton,
   ClearButton,
 } from "../styles/PostureData.styles";
 
@@ -23,6 +25,26 @@ const PostureData = () => {
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [stats, setStats] = useState(null);
   const [timeFilter, setTimeFilter] = useState("all"); // all, today, week, month
+
+  // 점수에 따른 상태 반환
+  const getScoreStatus = (score) => {
+    if (score >= 90) return { text: "완벽", color: "excellent" };
+    if (score >= 80) return { text: "좋음", color: "good" };
+    if (score >= 65) return { text: "보통", color: "average" };
+    if (score >= 50) return { text: "주의", color: "warning" };
+    return { text: "나쁨", color: "poor" };
+  };
+
+  // 날짜 포맷팅
+  const formatDate = (timestamp) => {
+    return new Date(timestamp).toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   // 자세 히스토리 로드
   const loadPostureHistory = useCallback(() => {
@@ -41,7 +63,7 @@ const PostureData = () => {
     const avgScore =
       data.reduce((sum, record) => sum + record.score, 0) / data.length;
     const goodPostureCount = data.filter((record) => record.score >= 80).length;
-    const poorPostureCount = data.filter((record) => record.score < 60).length;
+    const poorPostureCount = data.filter((record) => record.score < 50).length;
     const excellentCount = data.filter((record) => record.score >= 90).length;
 
     // 개선도 계산 (최근 10개 vs 이전 10개)
@@ -118,17 +140,166 @@ const PostureData = () => {
 
   // 데이터 내보내기
   const exportData = useCallback(() => {
-    const dataStr = JSON.stringify(filteredHistory, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    // CSV 헤더 생성
+    const headers = [
+      "날짜/시간",
+      "점수",
+      "상태",
+      "목 각도(도)",
+      "어깨 기울기(도)",
+      "머리 전방 돌출도(%)",
+      "어깨 높이 차이(%)",
+      "자세 피드백",
+    ];
+
+    // CSV 데이터 생성
+    const csvData = filteredHistory
+      .slice()
+      .reverse()
+      .map((record) => {
+        const status = getScoreStatus(record.score);
+        const feedback = record.issues ? record.issues.join("; ") : "";
+
+        return [
+          formatDate(record.timestamp),
+          record.score,
+          status.text,
+          record.neckAngle,
+          record.shoulderSlope,
+          record.headForward,
+          record.shoulderHeightDiff,
+          feedback,
+        ];
+      });
+
+    // CSV 문자열 생성
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    // BOM 추가 (한글 깨짐 방지)
+    const BOM = "\uFEFF";
+    const csvWithBOM = BOM + csvContent;
+
+    // 파일 다운로드
+    const dataBlob = new Blob([csvWithBOM], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `posture-data-${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    link.download = `자세데이터_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [filteredHistory]);
+  }, [filteredHistory, getScoreStatus, formatDate]);
+
+  // 엑셀 형식으로 내보내기
+  const exportExcel = useCallback(() => {
+    // 워크북 생성
+    const wb = XLSX.utils.book_new();
+
+    // 데이터 시트 생성
+    const headers = [
+      "날짜/시간",
+      "점수",
+      "상태",
+      "목 각도(도)",
+      "어깨 기울기(도)",
+      "머리 전방 돌출도(%)",
+      "어깨 높이 차이(%)",
+      "자세 피드백",
+    ];
+
+    const excelData = filteredHistory
+      .slice()
+      .reverse()
+      .map((record) => {
+        const status = getScoreStatus(record.score);
+        const feedback = record.issues ? record.issues.join("; ") : "";
+
+        return [
+          formatDate(record.timestamp),
+          record.score,
+          status.text,
+          parseFloat(record.neckAngle),
+          parseFloat(record.shoulderSlope),
+          parseFloat(record.headForward),
+          parseFloat(record.shoulderHeightDiff),
+          feedback,
+        ];
+      });
+
+    // 헤더와 데이터 결합
+    const worksheetData = [headers, ...excelData];
+
+    // 워크시트 생성
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+
+    // 열 너비 설정
+    const colWidths = [
+      { wch: 20 }, // 날짜/시간
+      { wch: 8 }, // 점수
+      { wch: 10 }, // 상태
+      { wch: 12 }, // 목 각도
+      { wch: 12 }, // 어깨 기울기
+      { wch: 15 }, // 머리 전방 돌출도
+      { wch: 12 }, // 어깨 높이 차이
+      { wch: 30 }, // 자세 피드백
+    ];
+    ws["!cols"] = colWidths;
+
+    // 점수에 따른 셀 스타일 설정
+    excelData.forEach((row, index) => {
+      const score = row[1];
+      const scoreCell = XLSX.utils.encode_cell({ r: index + 1, c: 1 });
+
+      if (score >= 80) {
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "C6EFCE" } } }; // 연한 초록
+      } else if (score >= 65) {
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "BBDEFB" } } }; // 연한 파랑
+      } else if (score >= 50) {
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFE0B2" } } }; // 연한 주황
+      } else {
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFCDD2" } } }; // 연한 빨강
+      }
+    });
+
+    // 통계 시트 생성
+    const statsData = [
+      ["자세 데이터 통계 리포트"],
+      [""],
+      ["생성일", new Date().toLocaleString("ko-KR")],
+      ["총 기록 수", filteredHistory.length],
+      ["평균 점수", stats?.avgScore || 0],
+      ["좋은 자세 횟수", stats?.goodPostureCount || 0],
+      ["나쁜 자세 횟수", stats?.poorPostureCount || 0],
+      ["완벽 자세 횟수", stats?.excellentCount || 0],
+      ["개선도", stats?.improvement || 0],
+      ["일관성", stats?.consistency || 0],
+      ["최고 점수", stats?.maxScore || 0],
+      ["최저 점수", stats?.minScore || 0],
+      [""],
+      ["점수 기준"],
+      ["80점 이상", "좋음"],
+      ["65-79점", "보통"],
+      ["50-64점", "주의"],
+      ["50점 미만", "나쁨"],
+    ];
+
+    const statsWs = XLSX.utils.aoa_to_sheet(statsData);
+    statsWs["!cols"] = [{ wch: 20 }, { wch: 15 }];
+
+    // 워크북에 시트 추가
+    XLSX.utils.book_append_sheet(wb, ws, "자세 데이터");
+    XLSX.utils.book_append_sheet(wb, statsWs, "통계 요약");
+
+    // 엑셀 파일 다운로드
+    XLSX.writeFile(
+      wb,
+      `자세데이터_리포트_${new Date().toISOString().split("T")[0]}.xlsx`
+    );
+  }, [filteredHistory, getScoreStatus, formatDate, stats]);
 
   // 데이터 초기화
   const clearData = useCallback(() => {
@@ -144,25 +315,6 @@ const PostureData = () => {
     }
   }, []);
 
-  // 날짜 포맷팅
-  const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // 점수에 따른 상태 반환
-  const getScoreStatus = (score) => {
-    if (score >= 90) return { text: "우수", color: "excellent" };
-    if (score >= 80) return { text: "좋음", color: "good" };
-    if (score >= 60) return { text: "보통", color: "average" };
-    return { text: "나쁨", color: "poor" };
-  };
-
   useEffect(() => {
     loadPostureHistory();
   }, [loadPostureHistory]);
@@ -176,7 +328,10 @@ const PostureData = () => {
       <Header>
         <h1>자세 데이터 분석</h1>
         <div>
-          <ExportButton onClick={exportData}>데이터 내보내기</ExportButton>
+          <ExportButton onClick={exportData}>CSV 내보내기</ExportButton>
+          <ExcelExportButton onClick={exportExcel}>
+            엑셀 리포트
+          </ExcelExportButton>
           <ClearButton onClick={clearData}>데이터 초기화</ClearButton>
         </div>
       </Header>
@@ -231,13 +386,13 @@ const PostureData = () => {
               <StatValue>{stats.improvement}점</StatValue>
             </StatCard>
 
-            <StatCard isGood={parseFloat(stats.consistency) >= 70}>
+            <StatCard isGood={parseFloat(stats.consistency) >= 50}>
               <StatLabel>일관성</StatLabel>
               <StatValue>{stats.consistency}%</StatValue>
             </StatCard>
 
             <StatCard isGood={stats.excellentCount > 0}>
-              <StatLabel>우수 자세</StatLabel>
+              <StatLabel>완벽 자세</StatLabel>
               <StatValue>{stats.excellentCount}회</StatValue>
             </StatCard>
 
@@ -246,7 +401,7 @@ const PostureData = () => {
               <StatValue>{stats.maxScore}점</StatValue>
             </StatCard>
 
-            <StatCard isGood={stats.minScore >= 60}>
+            <StatCard isGood={stats.minScore >= 50}>
               <StatLabel>최저 점수</StatLabel>
               <StatValue>{stats.minScore}점</StatValue>
             </StatCard>
@@ -263,7 +418,7 @@ const PostureData = () => {
                     <TableHeader>상태</TableHeader>
                     <TableHeader>목 각도</TableHeader>
                     <TableHeader>어깨 기울기</TableHeader>
-                    <TableHeader>등 각도</TableHeader>
+                    <TableHeader>머리 전방 돌출</TableHeader>
                   </TableRow>
                 </thead>
                 <tbody>
@@ -281,7 +436,7 @@ const PostureData = () => {
                           </TableCell>
                           <TableCell>{record.neckAngle}°</TableCell>
                           <TableCell>{record.shoulderSlope}°</TableCell>
-                          <TableCell>{record.backAngle}°</TableCell>
+                          <TableCell>{record.headForward}%</TableCell>
                         </TableRow>
                       );
                     })}

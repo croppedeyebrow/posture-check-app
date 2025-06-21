@@ -144,6 +144,7 @@ export const TableCell = styled.td`
     if (color === "excellent") return "#4CAF50";
     if (color === "good") return "#2196F3";
     if (color === "average") return "#FF9800";
+    if (color === "warning") return "#FFC107";
     if (color === "poor") return "#F44336";
     return theme.colors.text;
   }};
@@ -179,6 +180,22 @@ export const ExportButton = styled.button`
 
   &:hover {
     background: #45a049;
+    transform: translateY(-1px);
+  }
+`;
+
+export const ExcelExportButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primaryDark};
     transform: translateY(-1px);
   }
 `;

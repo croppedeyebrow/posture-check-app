@@ -22,6 +22,7 @@ export const StyledWebcam = styled(Webcam)`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 8px;
 `;
 
 export const Canvas = styled.canvas`
@@ -31,6 +32,7 @@ export const Canvas = styled.canvas`
   width: 100%;
   height: 100%;
   pointer-events: none;
+  border-radius: 8px;
 `;
 
 export const ControlsContainer = styled.div`
@@ -108,7 +110,8 @@ export const ScoreCircle = styled.div`
   font-weight: bold;
   background: ${({ score }) => {
     if (score >= 80) return "linear-gradient(135deg, #4CAF50, #45a049)";
-    if (score >= 60) return "linear-gradient(135deg, #FF9800, #F57C00)";
+    if (score >= 65) return "linear-gradient(135deg, #2196F3, #1976D2)";
+    if (score >= 50) return "linear-gradient(135deg, #FF9800, #F57C00)";
     return "linear-gradient(135deg, #F44336, #D32F2F)";
   }};
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);

@@ -19,6 +19,7 @@
     "react-router-dom": "^7.6.2",
     "react-webcam": "^7.2.0",
     "styled-components": "^6.1.19",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

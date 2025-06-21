@@ -109,19 +109,11 @@ const PostureDetection = () => {
       const nose = landmarks[0];
       const leftShoulder = landmarks[11];
       const rightShoulder = landmarks[12];
-      const leftHip = landmarks[23];
-      const rightHip = landmarks[24];
 
       // 어깨 중점 계산
       const shoulderMidpoint = {
         x: (leftShoulder.x + rightShoulder.x) / 2,
         y: (leftShoulder.y + rightShoulder.y) / 2,
-      };
-
-      // 골반 중점 계산
-      const hipMidpoint = {
-        x: (leftHip.x + rightHip.x) / 2,
-        y: (leftHip.y + rightHip.y) / 2,
       };
 
       // 1. 목 각도 계산 (코와 어깨 중점)
@@ -137,23 +129,10 @@ const PostureDetection = () => {
         ) *
         (180 / Math.PI);
 
-      // 3. 등 각도 계산 (어깨 중점과 골반 중점)
-      const backAngle =
-        Math.atan2(
-          shoulderMidpoint.y - hipMidpoint.y,
-          shoulderMidpoint.x - hipMidpoint.x
-        ) *
-        (180 / Math.PI);
-
-      // 4. 골반 기울기 계산
-      const hipSlope =
-        Math.atan2(rightHip.y - leftHip.y, rightHip.x - leftHip.x) *
-        (180 / Math.PI);
-
-      // 5. 머리 전방 돌출도 계산 (코와 어깨 중점의 수직 거리)
+      // 3. 머리 전방 돌출도 계산 (코와 어깨 중점의 수직 거리)
       const headForward = Math.abs(nose.x - shoulderMidpoint.x);
 
-      // 6. 어깨 높이 차이 계산
+      // 4. 어깨 높이 차이 계산
       const shoulderHeightDiff = Math.abs(leftShoulder.y - rightShoulder.y);
 
       // 자세 상태 판단
@@ -161,71 +140,82 @@ const PostureDetection = () => {
       let issues = [];
       let score = 100;
 
-      // 목 각도 검사 (정상: -10° ~ 10°)
-      if (Math.abs(neckAngle) > 10) {
-        issues.push("목이 기울어져 있습니다");
-        status = "주의";
-        score -= 20;
-      }
-
-      // 어깨 기울기 검사 (정상: -5° ~ 5°)
-      if (Math.abs(shoulderSlope) > 5) {
-        issues.push("어깨가 기울어져 있습니다");
+      // 목 각도 검사 (정상: -30° ~ 30°) - 더 관대한 기준
+      if (Math.abs(neckAngle) > 30) {
+        issues.push("목이 많이 기울어져 있습니다");
         status = "주의";
         score -= 15;
-      }
-
-      // 등 각도 검사 (정상: 85° ~ 95°)
-      if (backAngle < 85 || backAngle > 95) {
-        issues.push("등이 구부러져 있습니다");
-        status = "주의";
-        score -= 25;
-      }
-
-      // 골반 기울기 검사 (정상: -3° ~ 3°)
-      if (Math.abs(hipSlope) > 3) {
-        issues.push("골반이 기울어져 있습니다");
-        status = "주의";
-        score -= 15;
-      }
-
-      // 머리 전방 돌출 검사
-      if (headForward > 0.1) {
-        issues.push("머리가 앞으로 나와 있습니다");
-        status = "주의";
-        score -= 20;
-      }
-
-      // 어깨 높이 차이 검사
-      if (shoulderHeightDiff > 0.05) {
-        issues.push("어깨 높이가 다릅니다");
-        status = "주의";
+      } else if (Math.abs(neckAngle) > 20) {
+        issues.push("목이 약간 기울어져 있습니다");
         score -= 10;
       }
 
-      if (issues.length === 0) {
-        status = "좋음";
-        issues.push("올바른 자세입니다!");
+      // 어깨 기울기 검사 (정상: -15° ~ 15°) - 더 관대한 기준
+      if (Math.abs(shoulderSlope) > 15) {
+        issues.push("어깨가 많이 기울어져 있습니다");
+        status = "주의";
+        score -= 12;
+      } else if (Math.abs(shoulderSlope) > 10) {
+        issues.push("어깨가 약간 기울어져 있습니다");
+        score -= 8;
       }
 
-      // 점수 보정
+      // 머리 전방 돌출 검사 (정상: ≤ 20%) - 더 관대한 기준
+      if (headForward > 0.2) {
+        issues.push("머리가 많이 앞으로 나와 있습니다");
+        status = "주의";
+        score -= 15;
+      } else if (headForward > 0.15) {
+        issues.push("머리가 약간 앞으로 나와 있습니다");
+        score -= 10;
+      }
+
+      // 어깨 높이 차이 검사 (정상: ≤ 12%) - 더 관대한 기준
+      if (shoulderHeightDiff > 0.12) {
+        issues.push("어깨 높이가 많이 다릅니다");
+        status = "주의";
+        score -= 8;
+      } else if (shoulderHeightDiff > 0.08) {
+        issues.push("어깨 높이가 약간 다릅니다");
+        score -= 5;
+      }
+
+      // 점수 보정 및 상태 결정
       score = Math.max(0, score);
 
+      // 점수에 따른 최종 상태 결정
+      if (score >= 80) {
+        status = "좋음";
+        if (issues.length === 0) {
+          issues.push("완벽한 자세입니다! 👍");
+        }
+      } else if (score >= 65) {
+        status = "보통";
+        if (issues.length === 0) {
+          issues.push("전반적으로 괜찮은 자세입니다");
+        }
+      } else {
+        status = "주의";
+        if (issues.length === 0) {
+          issues.push("자세를 개선해보세요");
+        }
+      }
+
       // 알림 설정
-      if (score < 300 && !notification) {
+      if (score < 50 && !notification) {
         setNotification({
-          message: "자세가 좋지 않습니다! 자세를 교정해주세요.",
+          message: "자세가 많이 좋지 않습니다! 자세를 교정해주세요.",
           type: "warning",
         });
 
         // 브라우저 알림 (사용자가 허용한 경우)
         if (Notification.permission === "granted") {
           new Notification("자세 교정 알림", {
-            body: "현재 자세가 좋지 않습니다. 자세를 교정해주세요.",
-            icon: "/public/allright_posture.svg",
+            body: "현재 자세가 많이 좋지 않습니다. 자세를 교정해주세요.",
+            icon: "/vite.svg",
           });
         }
-      } else if (score >= 80 && notification) {
+      } else if (score >= 65 && notification) {
         setNotification(null);
       }
 
@@ -233,8 +223,6 @@ const PostureDetection = () => {
       setPostureData({
         neckAngle: neckAngle.toFixed(1),
         shoulderSlope: shoulderSlope.toFixed(1),
-        backAngle: backAngle.toFixed(1),
-        hipSlope: hipSlope.toFixed(1),
         headForward: (headForward * 100).toFixed(1),
         shoulderHeightDiff: (shoulderHeightDiff * 100).toFixed(1),
         score: score,
@@ -246,8 +234,6 @@ const PostureDetection = () => {
         status,
         neckAngle,
         shoulderSlope,
-        backAngle,
-        hipSlope,
         headForward,
         shoulderHeightDiff,
         score,
@@ -262,8 +248,6 @@ const PostureDetection = () => {
         status,
         neckAngle,
         shoulderSlope,
-        backAngle,
-        hipSlope,
         headForward,
         shoulderHeightDiff,
         score,
@@ -406,23 +390,6 @@ const PostureDetection = () => {
             >
               <MetricLabel>어깨 기울기</MetricLabel>
               <MetricValue>{postureData.shoulderSlope}°</MetricValue>
-            </MetricCard>
-
-            <MetricCard
-              isGood={
-                parseFloat(postureData.backAngle) >= 85 &&
-                parseFloat(postureData.backAngle) <= 95
-              }
-            >
-              <MetricLabel>등 각도</MetricLabel>
-              <MetricValue>{postureData.backAngle}°</MetricValue>
-            </MetricCard>
-
-            <MetricCard
-              isGood={Math.abs(parseFloat(postureData.hipSlope)) <= 3}
-            >
-              <MetricLabel>골반 기울기</MetricLabel>
-              <MetricValue>{postureData.hipSlope}°</MetricValue>
             </MetricCard>
 
             <MetricCard isGood={parseFloat(postureData.headForward) <= 10}>
