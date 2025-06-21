@@ -28,6 +28,7 @@ const Home = () => {
 
       <ButtonContainer>
         <StyledLink to="/detection">자세 감지 시작하기</StyledLink>
+        <StyledLink to="/data">자세 데이터 분석</StyledLink>
       </ButtonContainer>
     </HomeContainer>
   );

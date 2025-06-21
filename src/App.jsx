@@ -4,6 +4,7 @@ import { theme } from "./styles/theme";
 import GlobalStyle from "./styles/GlobalStyle";
 import Home from "./pages/Home";
 import PostureDetection from "./pages/PostureDetection";
+import PostureData from "./pages/PostureData";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/detection" element={<PostureDetection />} />
+          <Route path="/data" element={<PostureData />} />
         </Routes>
       </Router>
     </ThemeProvider>
