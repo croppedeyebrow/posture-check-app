@@ -364,3 +364,160 @@ export const ExcelExportButton = styled.button`
 - ESLint 9.25.0
 - TypeScript 지원
 - Hot Module Replacement
+
+#### 개발 도구
+
+- ESLint 9.25.0
+- TypeScript 지원
+- Hot Module Replacement
+
+---
+
+## 🚀 **Vercel 배포 완료 (2024년 12월)**
+
+### ✅ **배포 정보**
+
+#### **프로덕션 URL**
+
+- **메인 URL**: https://posture-check-95gfetj7f-leejaesungs-projects-6779349e.vercel.app
+- **프로젝트명**: posture-check-app
+- **Vercel 대시보드**: https://vercel.com/leejaesungs-projects-6779349e/posture-check-app/Hb8naJGsfFWa2yjKteZdMB6jG4ns
+
+#### **배포 설정**
+
+```json
+// vercel.json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+### 🔧 **배포 준비 작업**
+
+#### 1. **Vercel CLI 설치**
+
+```bash
+yarn global add vercel
+# 또는
+npm install -g vercel
+```
+
+#### 2. **배포 설정 파일 생성**
+
+**vercel.json**
+
+- Vite 프레임워크 자동 감지
+- SPA 라우팅을 위한 리다이렉트 설정
+- 정적 자산 캐싱 최적화
+
+**public/\_redirects**
+
+```
+/*    /index.html   200
+```
+
+#### 3. **HTML 메타데이터 최적화**
+
+```html
+<!-- index.html -->
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/allright_posture.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AI 기반 실시간 자세 교정 웹 애플리케이션 - MediaPipe를 활용한 정확한 자세 분석"
+    />
+    <meta
+      name="keywords"
+      content="자세교정, 자세분석, AI, MediaPipe, 웹캠, 실시간감지"
+    />
+    <meta name="author" content="Posture App Team" />
+    <title>AI 자세교정 앱 - 실시간 자세 분석 및 교정</title>
+  </head>
+</html>
+```
+
+### 📋 **배포 과정**
+
+#### 1. **Vercel 로그인**
+
+```bash
+npx vercel login
+# 이메일 인증: lee940706@gmail.com
+```
+
+#### 2. **프로젝트 배포**
+
+```bash
+npx vercel
+```
+
+#### 3. **자동 설정된 구성**
+
+- **빌드 명령어**: `npm run build`
+- **프레임워크**: Vite (자동 감지)
+- **출력 디렉토리**: `dist`
+- **개발 명령어**: `vite --port $PORT`
+- **설치 명령어**: yarn/npm/pnpm/bun 자동 감지
+
+### 🎯 **배포 완료 체크리스트**
+
+- ✅ Vercel CLI 설치
+- ✅ vercel.json 설정 파일 생성
+- ✅ HTML 메타데이터 최적화
+- ✅ 파비콘 설정 (allright_posture.ico)
+- ✅ SPA 라우팅 설정
+- ✅ Vercel 로그인
+- ✅ 프로젝트 배포
+- ✅ 프로덕션 URL 생성
+- ✅ 자동 빌드 설정
+
+### 🔗 **배포 후 관리**
+
+#### **자동 배포 설정**
+
+- Git 저장소 연결 시 코드 변경 시 자동 배포
+- 브랜치별 프리뷰 배포 지원
+
+#### **도메인 관리**
+
+- Vercel 대시보드에서 커스텀 도메인 설정 가능
+- SSL 인증서 자동 발급
+
+#### **성능 모니터링**
+
+- Vercel Analytics로 사용자 행동 분석
+- 실시간 성능 메트릭 확인
+
+### 📊 **배포 통계**
+
+- **빌드 시간**: 3초
+- **번들 크기**: 최적화 완료
+- **첫 로딩 시간**: 빠른 로딩
+- **SEO 최적화**: 메타데이터 완비
+
+### 🎉 **배포 성공!**
+
+AI 자세교정 앱이 성공적으로 Vercel에 배포되었습니다!
+
+**바로 사용하기**: https://posture-check-95gfetj7f-leejaesungs-projects-6779349e.vercel.app
+
+---
+
+## 📞 **문의 및 지원**
+
+프로젝트 관련 문의사항이나 개선 제안이 있으시면 언제든 연락주세요!
+
+**개발자**: LeeJaeSung  
+**이메일**: lee940706@gmail.com  
+**블로그**: https://velog.io/@c_d_c
