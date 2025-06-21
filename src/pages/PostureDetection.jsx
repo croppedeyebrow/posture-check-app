@@ -212,7 +212,7 @@ const PostureDetection = () => {
       score = Math.max(0, score);
 
       // 알림 설정
-      if (score < 60 && !notification) {
+      if (score < 300 && !notification) {
         setNotification({
           message: "자세가 좋지 않습니다! 자세를 교정해주세요.",
           type: "warning",
@@ -222,7 +222,7 @@ const PostureDetection = () => {
         if (Notification.permission === "granted") {
           new Notification("자세 교정 알림", {
             body: "현재 자세가 좋지 않습니다. 자세를 교정해주세요.",
-            icon: "/vite.svg",
+            icon: "/public/allright_posture.svg",
           });
         }
       } else if (score >= 80 && notification) {
