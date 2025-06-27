@@ -109,8 +109,8 @@ export const ScoreCircle = styled.div`
   font-size: 1.5rem;
   font-weight: bold;
   background: ${({ score }) => {
-    if (score >= 80) return "linear-gradient(135deg, #4CAF50, #45a049)";
-    if (score >= 65) return "linear-gradient(135deg, #2196F3, #1976D2)";
+    if (score >= 90) return "linear-gradient(135deg, #4CAF50, #45a049)";
+    if (score >= 60) return "linear-gradient(135deg, #2196F3, #1976D2)";
     if (score >= 50) return "linear-gradient(135deg, #FF9800, #F57C00)";
     return "linear-gradient(135deg, #F44336, #D32F2F)";
   }};
@@ -167,16 +167,32 @@ export const IssuesList = styled.ul`
 `;
 
 export const IssueItem = styled.li`
-  padding: 0.5rem 1rem;
+  padding: 1rem;
   margin: 0.5rem 0;
   background: ${({ theme, isGood }) =>
     isGood ? theme.colors.success + "20" : theme.colors.error + "20"};
-  border-radius: 6px;
+  border-radius: 8px;
   border-left: 4px solid
     ${({ theme, isGood }) =>
       isGood ? theme.colors.success : theme.colors.error};
   color: ${({ theme, isGood }) =>
     isGood ? theme.colors.success : theme.colors.error};
+
+  strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: ${({ theme, isGood }) =>
+      isGood ? theme.colors.success : theme.colors.error};
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: ${({ theme }) => theme.colors.text};
+    opacity: 0.9;
+  }
 `;
 
 export const NotificationBanner = styled.div`

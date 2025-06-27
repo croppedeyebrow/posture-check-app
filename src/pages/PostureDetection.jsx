@@ -136,68 +136,114 @@ const PostureDetection = () => {
       const shoulderHeightDiff = Math.abs(leftShoulder.y - rightShoulder.y);
 
       // 자세 상태 판단
-      let status = "좋음";
+      let status = "감지 대기 중";
       let issues = [];
       let score = 100;
+      let totalDeduction = 0;
 
-      // 목 각도 검사 (정상: -30° ~ 30°) - 더 관대한 기준
-      if (Math.abs(neckAngle) > 30) {
-        issues.push("목이 많이 기울어져 있습니다");
+      // 목 각도 검사 (정상: -45° ~ 45°) - 더 관대한 기준
+      if (Math.abs(neckAngle) > 45) {
+        issues.push({
+          problem: "목이 많이 기울어져 있습니다",
+          solution:
+            "목을 중앙으로 돌리고, 턱을 가슴에 가깝게 당겨주세요. 목 스트레칭을 정기적으로 해주세요.",
+        });
         status = "주의";
-        score -= 15;
-      } else if (Math.abs(neckAngle) > 20) {
-        issues.push("목이 약간 기울어져 있습니다");
-        score -= 10;
+        totalDeduction += 12;
+      } else if (Math.abs(neckAngle) > 30) {
+        issues.push({
+          problem: "목이 약간 기울어져 있습니다",
+          solution: "목을 중앙으로 돌리고, 균형을 맞춰주세요.",
+        });
+        totalDeduction += 8;
       }
 
-      // 어깨 기울기 검사 (정상: -15° ~ 15°) - 더 관대한 기준
-      if (Math.abs(shoulderSlope) > 15) {
-        issues.push("어깨가 많이 기울어져 있습니다");
+      // 어깨 기울기 검사 (정상: -25° ~ 25°) - 더 관대한 기준
+      if (Math.abs(shoulderSlope) > 25) {
+        issues.push({
+          problem: "어깨가 많이 기울어져 있습니다",
+          solution:
+            "어깨를 수평으로 맞추고, 어깨 스트레칭을 해주세요. 한쪽 어깨에만 무게를 실지 마세요.",
+        });
         status = "주의";
-        score -= 12;
-      } else if (Math.abs(shoulderSlope) > 10) {
-        issues.push("어깨가 약간 기울어져 있습니다");
-        score -= 8;
+        totalDeduction += 10;
+      } else if (Math.abs(shoulderSlope) > 15) {
+        issues.push({
+          problem: "어깨가 약간 기울어져 있습니다",
+          solution: "어깨를 수평으로 맞추고 균형을 잡아주세요.",
+        });
+        totalDeduction += 6;
       }
 
       // 머리 전방 돌출 검사 (정상: ≤ 20%) - 더 관대한 기준
       if (headForward > 0.2) {
-        issues.push("머리가 많이 앞으로 나와 있습니다");
+        issues.push({
+          problem: "머리가 많이 앞으로 나와 있습니다",
+          solution:
+            "턱을 뒤로 당기고, 목을 뒤로 젖혀주세요. 모니터를 눈높이에 맞춰주세요.",
+        });
         status = "주의";
-        score -= 15;
+        totalDeduction += 12;
       } else if (headForward > 0.15) {
-        issues.push("머리가 약간 앞으로 나와 있습니다");
-        score -= 10;
+        issues.push({
+          problem: "머리가 약간 앞으로 나와 있습니다",
+          solution: "턱을 뒤로 당기고 목을 중앙에 위치시켜주세요.",
+        });
+        totalDeduction += 8;
       }
 
       // 어깨 높이 차이 검사 (정상: ≤ 12%) - 더 관대한 기준
       if (shoulderHeightDiff > 0.12) {
-        issues.push("어깨 높이가 많이 다릅니다");
-        status = "주의";
-        score -= 8;
+        issues.push({
+          problem: "어깨 높이가 많이 다릅니다",
+          solution:
+            "어깨를 수평으로 맞추고, 어깨 스트레칭을 해주세요. 한쪽에만 무게를 실지 마세요.",
+        });
+        totalDeduction += 8;
       } else if (shoulderHeightDiff > 0.08) {
-        issues.push("어깨 높이가 약간 다릅니다");
-        score -= 5;
+        issues.push({
+          problem: "어깨 높이가 약간 다릅니다",
+          solution: "어깨를 수평으로 맞추고 균형을 잡아주세요.",
+        });
+        totalDeduction += 4;
       }
 
-      // 점수 보정 및 상태 결정
-      score = Math.max(0, score);
+      // 최종 점수 계산 (총 감점을 적용)
+      score = Math.max(0, 100 - totalDeduction);
 
       // 점수에 따른 최종 상태 결정
-      if (score >= 80) {
-        status = "좋음";
+      if (score >= 90) {
+        status = "완벽한 자세";
         if (issues.length === 0) {
-          issues.push("완벽한 자세입니다! 👍");
+          issues.push({
+            problem: "완벽한 자세입니다! 👍",
+            solution:
+              "현재 자세를 유지해주세요. 정기적인 스트레칭도 잊지 마세요.",
+          });
         }
-      } else if (score >= 65) {
-        status = "보통";
+      } else if (score >= 60) {
+        status = "좋은 자세";
         if (issues.length === 0) {
-          issues.push("전반적으로 괜찮은 자세입니다");
+          issues.push({
+            problem: "좋은 자세입니다",
+            solution: "현재 자세를 유지하고 더욱 개선해보세요.",
+          });
+        }
+      } else if (score >= 50) {
+        status = "보통 자세";
+        if (issues.length === 0) {
+          issues.push({
+            problem: "전반적으로 괜찮은 자세입니다",
+            solution: "더 나은 자세를 위해 위의 피드백을 참고해주세요.",
+          });
         }
       } else {
-        status = "주의";
+        status = "나쁜 자세";
         if (issues.length === 0) {
-          issues.push("자세를 개선해보세요");
+          issues.push({
+            problem: "자세를 개선해보세요",
+            solution: "정기적인 스트레칭과 자세 교정 운동을 해주세요.",
+          });
         }
       }
 
@@ -215,7 +261,7 @@ const PostureDetection = () => {
             icon: "/vite.svg",
           });
         }
-      } else if (score >= 65 && notification) {
+      } else if (score >= 50 && notification) {
         setNotification(null);
       }
 
@@ -359,7 +405,11 @@ const PostureDetection = () => {
         <Canvas ref={canvasRef} width={640} height={480} />
       </VideoContainer>
 
-      <StatusText isGood={postureStatus === "좋음"}>
+      <StatusText
+        isGood={
+          postureStatus === "완벽한 자세" || postureStatus === "좋은 자세"
+        }
+      >
         {isDetecting ? `자세 상태: ${postureStatus}` : "자세 감지 준비 중..."}
       </StatusText>
 
@@ -377,16 +427,35 @@ const PostureDetection = () => {
             </ScoreInfo>
           </ScoreContainer>
 
+          <h4>자세 피드백</h4>
+          <IssuesList>
+            {postureData.issues.map((issue, index) => (
+              <IssueItem
+                key={index}
+                isGood={
+                  issue.problem.includes("완벽한") ||
+                  issue.problem.includes("좋은") ||
+                  issue.problem.includes("괜찮은")
+                }
+              >
+                <div>
+                  <strong>{issue.problem}</strong>
+                  <p>{issue.solution}</p>
+                </div>
+              </IssueItem>
+            ))}
+          </IssuesList>
+
           <MetricsGrid>
             <MetricCard
-              isGood={Math.abs(parseFloat(postureData.neckAngle)) <= 10}
+              isGood={Math.abs(parseFloat(postureData.neckAngle)) <= 20}
             >
               <MetricLabel>목 각도</MetricLabel>
               <MetricValue>{postureData.neckAngle}°</MetricValue>
             </MetricCard>
 
             <MetricCard
-              isGood={Math.abs(parseFloat(postureData.shoulderSlope)) <= 5}
+              isGood={Math.abs(parseFloat(postureData.shoulderSlope)) <= 10}
             >
               <MetricLabel>어깨 기울기</MetricLabel>
               <MetricValue>{postureData.shoulderSlope}°</MetricValue>
@@ -404,15 +473,6 @@ const PostureDetection = () => {
               <MetricValue>{postureData.shoulderHeightDiff}%</MetricValue>
             </MetricCard>
           </MetricsGrid>
-
-          <h4>자세 피드백</h4>
-          <IssuesList>
-            {postureData.issues.map((issue, index) => (
-              <IssueItem key={index} isGood={issue.includes("올바른")}>
-                {issue}
-              </IssueItem>
-            ))}
-          </IssuesList>
         </PostureInfo>
       )}
     </DetectionContainer>

@@ -71,8 +71,13 @@ export const StatCard = styled.div`
   padding: 1.5rem;
   border-radius: 12px;
   border-left: 4px solid
-    ${({ theme, isGood }) =>
-      isGood ? theme.colors.success : theme.colors.error};
+    ${({ theme, isGood, postureType }) => {
+      if (postureType === "excellent") return "#2196F3"; // 완벽한 자세 - blue
+      if (postureType === "good") return "#4CAF50"; // 좋은 자세 - green
+      if (postureType === "average") return "#FF9800"; // 보통 자세 - orange
+      if (postureType === "poor") return "#F44336"; // 나쁜 자세 - red
+      return isGood ? theme.colors.success : theme.colors.error;
+    }};
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease;
 
@@ -141,10 +146,9 @@ export const TableRow = styled.tr`
 export const TableCell = styled.td`
   padding: 1rem;
   color: ${({ theme, color }) => {
-    if (color === "excellent") return "#4CAF50";
-    if (color === "good") return "#2196F3";
+    if (color === "excellent") return "#2196F3";
+    if (color === "good") return "#4CAF50";
     if (color === "average") return "#FF9800";
-    if (color === "warning") return "#FFC107";
     if (color === "poor") return "#F44336";
     return theme.colors.text;
   }};
@@ -213,5 +217,95 @@ export const ClearButton = styled.button`
   &:hover {
     background: #d32f2f;
     transform: translateY(-1px);
+  }
+`;
+
+export const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: ${({ theme }) => theme.colors.background};
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+export const PaginationInfo = styled.div`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.9rem;
+  font-weight: 500;
+`;
+
+export const PaginationButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+export const PaginationButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: 2px solid
+    ${({ theme, active }) =>
+      active ? theme.colors.primary : theme.colors.border};
+  border-radius: 6px;
+  background: ${({ theme, active }) =>
+    active ? theme.colors.primary : "transparent"};
+  color: ${({ theme, active, disabled }) =>
+    disabled
+      ? theme.colors.textSecondary
+      : active
+      ? "white"
+      : theme.colors.text};
+  font-weight: 600;
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  transition: all 0.2s ease;
+  min-width: 40px;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme, active }) =>
+      active ? theme.colors.primaryDark : theme.colors.background};
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+`;
+
+export const PaginationEllipsis = styled.span`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-weight: 600;
+  padding: 0 0.5rem;
+`;
+
+export const HistoryHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h3 {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.text};
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+`;
+
+export const ToggleButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: ${({ theme }) => theme.colors.primary};
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  transform: ${({ expanded }) => (expanded ? "rotate(0deg)" : "rotate(0deg)")};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.background};
+    transform: scale(1.1);
   }
 `;

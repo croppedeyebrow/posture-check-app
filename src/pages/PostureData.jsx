@@ -18,6 +18,13 @@ import {
   ExportButton,
   ExcelExportButton,
   ClearButton,
+  PaginationContainer,
+  PaginationInfo,
+  PaginationButtons,
+  PaginationButton,
+  PaginationEllipsis,
+  HistoryHeader,
+  ToggleButton,
 } from "../styles/PostureData.styles";
 
 const PostureData = () => {
@@ -25,14 +32,16 @@ const PostureData = () => {
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [stats, setStats] = useState(null);
   const [timeFilter, setTimeFilter] = useState("all"); // all, today, week, month
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
 
   // 점수에 따른 상태 반환
   const getScoreStatus = (score) => {
-    if (score >= 90) return { text: "완벽", color: "excellent" };
-    if (score >= 80) return { text: "좋음", color: "good" };
-    if (score >= 65) return { text: "보통", color: "average" };
-    if (score >= 50) return { text: "주의", color: "warning" };
-    return { text: "나쁨", color: "poor" };
+    if (score >= 90) return { text: "완벽한 자세", color: "excellent" };
+    if (score >= 60) return { text: "좋은 자세", color: "good" };
+    if (score >= 50) return { text: "보통 자세", color: "average" };
+    return { text: "나쁜 자세", color: "poor" };
   };
 
   // 날짜 포맷팅
@@ -62,9 +71,12 @@ const PostureData = () => {
 
     const avgScore =
       data.reduce((sum, record) => sum + record.score, 0) / data.length;
-    const goodPostureCount = data.filter((record) => record.score >= 80).length;
+    const goodPostureCount = data.filter((record) => record.score >= 60).length;
     const poorPostureCount = data.filter((record) => record.score < 50).length;
     const excellentCount = data.filter((record) => record.score >= 90).length;
+    const normalPostureCount = data.filter(
+      (record) => record.score >= 50 && record.score < 60
+    ).length;
 
     // 개선도 계산 (최근 10개 vs 이전 10개)
     const recentScores = data.slice(-10).map((record) => record.score);
@@ -90,6 +102,7 @@ const PostureData = () => {
       goodPostureCount,
       poorPostureCount,
       excellentCount,
+      normalPostureCount,
       totalRecords: data.length,
       improvement: improvement.toFixed(1),
       maxScore,
@@ -102,6 +115,7 @@ const PostureData = () => {
   const applyTimeFilter = useCallback(
     (filter) => {
       setTimeFilter(filter);
+      setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
 
       const now = Date.now();
       let filteredData = [...postureHistory];
@@ -137,6 +151,17 @@ const PostureData = () => {
     },
     [postureHistory, calculateStats]
   );
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredHistory.slice(startIndex, endIndex);
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   // 데이터 내보내기
   const exportData = useCallback(() => {
@@ -254,14 +279,14 @@ const PostureData = () => {
       const score = row[1];
       const scoreCell = XLSX.utils.encode_cell({ r: index + 1, c: 1 });
 
-      if (score >= 80) {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "C6EFCE" } } }; // 연한 초록
-      } else if (score >= 65) {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "BBDEFB" } } }; // 연한 파랑
+      if (score >= 90) {
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "C6EFCE" } } }; // 연한 초록 (완벽한 자세)
+      } else if (score >= 60) {
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "BBDEFB" } } }; // 연한 파랑 (좋은 자세)
       } else if (score >= 50) {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFE0B2" } } }; // 연한 주황
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFE0B2" } } }; // 연한 주황 (보통 자세)
       } else {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFCDD2" } } }; // 연한 빨강
+        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFCDD2" } } }; // 연한 빨강 (나쁜 자세)
       }
     });
 
@@ -275,16 +300,17 @@ const PostureData = () => {
       ["좋은 자세 횟수", stats?.goodPostureCount || 0],
       ["나쁜 자세 횟수", stats?.poorPostureCount || 0],
       ["완벽 자세 횟수", stats?.excellentCount || 0],
+      ["보통 자세 횟수", stats?.normalPostureCount || 0],
       ["개선도", stats?.improvement || 0],
       ["일관성", stats?.consistency || 0],
       ["최고 점수", stats?.maxScore || 0],
       ["최저 점수", stats?.minScore || 0],
       [""],
       ["점수 기준"],
-      ["80점 이상", "좋음"],
-      ["65-79점", "보통"],
-      ["50-64점", "주의"],
-      ["50점 미만", "나쁨"],
+      ["90점 이상", "완벽한 자세"],
+      ["60-89점", "좋은 자세"],
+      ["50-59점", "보통 자세"],
+      ["50점 미만", "나쁜 자세"],
     ];
 
     const statsWs = XLSX.utils.aoa_to_sheet(statsData);
@@ -366,17 +392,33 @@ const PostureData = () => {
       {stats ? (
         <>
           <StatsGrid>
-            <StatCard isGood={parseFloat(stats.avgScore) >= 80}>
+            <StatCard isGood={parseFloat(stats.avgScore) >= 60}>
               <StatLabel>평균 점수</StatLabel>
               <StatValue>{stats.avgScore}점</StatValue>
             </StatCard>
 
-            <StatCard isGood={stats.goodPostureCount > stats.poorPostureCount}>
+            <StatCard isGood={stats.excellentCount > 0} postureType="excellent">
+              <StatLabel>완벽한 자세</StatLabel>
+              <StatValue>{stats.excellentCount}회</StatValue>
+            </StatCard>
+
+            <StatCard
+              isGood={stats.goodPostureCount > stats.poorPostureCount}
+              postureType="good"
+            >
               <StatLabel>좋은 자세</StatLabel>
               <StatValue>{stats.goodPostureCount}회</StatValue>
             </StatCard>
 
-            <StatCard isGood={stats.poorPostureCount < 5}>
+            <StatCard
+              isGood={stats.normalPostureCount > 0}
+              postureType="average"
+            >
+              <StatLabel>보통 자세</StatLabel>
+              <StatValue>{stats.normalPostureCount}회</StatValue>
+            </StatCard>
+
+            <StatCard isGood={stats.poorPostureCount < 5} postureType="poor">
               <StatLabel>나쁜 자세</StatLabel>
               <StatValue>{stats.poorPostureCount}회</StatValue>
             </StatCard>
@@ -391,58 +433,122 @@ const PostureData = () => {
               <StatValue>{stats.consistency}%</StatValue>
             </StatCard>
 
-            <StatCard isGood={stats.excellentCount > 0}>
-              <StatLabel>완벽 자세</StatLabel>
-              <StatValue>{stats.excellentCount}회</StatValue>
-            </StatCard>
-
             <StatCard isGood={stats.maxScore >= 90}>
               <StatLabel>최고 점수</StatLabel>
               <StatValue>{stats.maxScore}점</StatValue>
             </StatCard>
-
-            <StatCard isGood={stats.minScore >= 50}>
-              <StatLabel>최저 점수</StatLabel>
-              <StatValue>{stats.minScore}점</StatValue>
-            </StatCard>
           </StatsGrid>
 
           <ChartContainer>
-            <h3>자세 기록 히스토리</h3>
-            {filteredHistory.length > 0 ? (
-              <HistoryTable>
-                <thead>
-                  <TableRow>
-                    <TableHeader>날짜/시간</TableHeader>
-                    <TableHeader>점수</TableHeader>
-                    <TableHeader>상태</TableHeader>
-                    <TableHeader>목 각도</TableHeader>
-                    <TableHeader>어깨 기울기</TableHeader>
-                    <TableHeader>머리 전방 돌출</TableHeader>
-                  </TableRow>
-                </thead>
-                <tbody>
-                  {filteredHistory
-                    .slice()
-                    .reverse()
-                    .map((record, index) => {
-                      const status = getScoreStatus(record.score);
-                      return (
-                        <TableRow key={index}>
-                          <TableCell>{formatDate(record.timestamp)}</TableCell>
-                          <TableCell>{record.score}점</TableCell>
-                          <TableCell color={status.color}>
-                            {status.text}
-                          </TableCell>
-                          <TableCell>{record.neckAngle}°</TableCell>
-                          <TableCell>{record.shoulderSlope}°</TableCell>
-                          <TableCell>{record.headForward}%</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </tbody>
-              </HistoryTable>
-            ) : (
+            <HistoryHeader>
+              <h3>자세 기록 히스토리</h3>
+              <ToggleButton
+                onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+                expanded={isHistoryExpanded}
+              >
+                {isHistoryExpanded ? "▼" : "▶"}
+              </ToggleButton>
+            </HistoryHeader>
+            {isHistoryExpanded && filteredHistory.length > 0 && (
+              <>
+                <HistoryTable>
+                  <thead>
+                    <TableRow>
+                      <TableHeader>날짜/시간</TableHeader>
+                      <TableHeader>점수</TableHeader>
+                      <TableHeader>상태</TableHeader>
+                      <TableHeader>목 각도</TableHeader>
+                      <TableHeader>어깨 기울기</TableHeader>
+                      <TableHeader>머리 전방 돌출</TableHeader>
+                    </TableRow>
+                  </thead>
+                  <tbody>
+                    {currentData
+                      .slice()
+                      .reverse()
+                      .map((record, index) => {
+                        const status = getScoreStatus(record.score);
+                        return (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {formatDate(record.timestamp)}
+                            </TableCell>
+                            <TableCell>{record.score}점</TableCell>
+                            <TableCell color={status.color}>
+                              {status.text}
+                            </TableCell>
+                            <TableCell>{record.neckAngle}°</TableCell>
+                            <TableCell>{record.shoulderSlope}°</TableCell>
+                            <TableCell>{record.headForward}%</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </tbody>
+                </HistoryTable>
+
+                {/* 페이지네이션 */}
+                {totalPages > 1 && (
+                  <PaginationContainer>
+                    <PaginationInfo>
+                      {startIndex + 1}-
+                      {Math.min(endIndex, filteredHistory.length)} /{" "}
+                      {filteredHistory.length}개
+                    </PaginationInfo>
+                    <PaginationButtons>
+                      <PaginationButton
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        이전
+                      </PaginationButton>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          // 현재 페이지 주변 5개 페이지만 표시
+                          return (
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(page - currentPage) <= 2
+                          );
+                        })
+                        .map((page, index, array) => {
+                          // 건너뛴 페이지가 있으면 "..." 표시
+                          if (index > 0 && page - array[index - 1] > 1) {
+                            return (
+                              <React.Fragment key={`ellipsis-${page}`}>
+                                <PaginationEllipsis>...</PaginationEllipsis>
+                                <PaginationButton
+                                  onClick={() => handlePageChange(page)}
+                                  active={currentPage === page}
+                                >
+                                  {page}
+                                </PaginationButton>
+                              </React.Fragment>
+                            );
+                          }
+                          return (
+                            <PaginationButton
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              active={currentPage === page}
+                            >
+                              {page}
+                            </PaginationButton>
+                          );
+                        })}
+
+                      <PaginationButton
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        다음
+                      </PaginationButton>
+                    </PaginationButtons>
+                  </PaginationContainer>
+                )}
+              </>
+            )}
+            {isHistoryExpanded && filteredHistory.length === 0 && (
               <EmptyState>
                 <p>선택한 기간에 자세 데이터가 없습니다.</p>
               </EmptyState>
