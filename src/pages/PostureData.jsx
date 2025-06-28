@@ -26,6 +26,17 @@ import {
   HistoryHeader,
   ToggleButton,
 } from "../styles/PostureData.styles";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from "recharts";
 
 const PostureData = () => {
   const [postureHistory, setPostureHistory] = useState([]);
@@ -161,6 +172,54 @@ const PostureData = () => {
   // 페이지 변경 핸들러
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  // 그래프 데이터 준비
+  const prepareChartData = useCallback((data) => {
+    if (data.length === 0) return [];
+
+    // 최근 50개 데이터만 사용 (그래프가 너무 복잡해지지 않도록)
+    const recentData = data.slice(-50);
+
+    return recentData.map((record, index) => ({
+      index: index + 1,
+      score: record.score,
+      timestamp: record.timestamp,
+      date: new Date(record.timestamp).toLocaleDateString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
+  }, []);
+
+  // 커스텀 툴팁 컴포넌트
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          style={{
+            backgroundColor: "white",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            padding: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
+          <p style={{ margin: "0 0 4px 0", fontWeight: "bold" }}>
+            {payload[0].payload.date}
+          </p>
+          <p style={{ margin: "0", color: "#888" }}>
+            점수:{" "}
+            <span style={{ color: "#1890ff", fontWeight: "bold" }}>
+              {payload[0].value}점
+            </span>
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   // 데이터 내보내기
@@ -440,6 +499,58 @@ const PostureData = () => {
           </StatsGrid>
 
           <ChartContainer>
+            <HistoryHeader>
+              <h3>점수 변화 그래프</h3>
+            </HistoryHeader>
+            {filteredHistory.length > 0 && (
+              <div style={{ height: "300px", marginBottom: "24px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={prepareChartData(filteredHistory)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="index"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `#${value}`}
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `${value}점`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#1890ff"
+                      strokeWidth={2}
+                      fill="url(#colorGradient)"
+                      fillOpacity={0.3}
+                    />
+                    <defs>
+                      <linearGradient
+                        id="colorGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#1890ff"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#1890ff"
+                          stopOpacity={0.1}
+                        />
+                      </linearGradient>
+                    </defs>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
             <HistoryHeader>
               <h3>자세 기록 히스토리</h3>
               <ToggleButton
