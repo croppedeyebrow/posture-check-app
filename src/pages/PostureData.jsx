@@ -36,6 +36,10 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 
 const PostureData = () => {
@@ -191,6 +195,72 @@ const PostureData = () => {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      dateTime: new Date(record.timestamp).toLocaleString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
+  }, []);
+
+  // 자세 분포 파이차트 데이터 준비
+  const preparePieChartData = useCallback((data) => {
+    if (data.length === 0) return [];
+
+    const postureCounts = {
+      perfect: 0,
+      good: 0,
+      average: 0,
+      poor: 0,
+    };
+
+    data.forEach((record) => {
+      if (record.score >= 90) postureCounts.perfect++;
+      else if (record.score >= 60) postureCounts.good++;
+      else if (record.score >= 50) postureCounts.average++;
+      else postureCounts.poor++;
+    });
+
+    return [
+      { name: "완벽한 자세", value: postureCounts.perfect, color: "#2196F3" },
+      { name: "좋은 자세", value: postureCounts.good, color: "#4CAF50" },
+      { name: "보통 자세", value: postureCounts.average, color: "#FF9800" },
+      { name: "나쁜 자세", value: postureCounts.poor, color: "#F44336" },
+    ].filter((item) => item.value > 0);
+  }, []);
+
+  // 자세 지표 선그래프 데이터 준비
+  const prepareMetricsChartData = useCallback((data) => {
+    if (data.length === 0) return [];
+
+    // 최근 30개 데이터만 사용 (지표 그래프는 더 적게)
+    const recentData = data.slice(-30);
+
+    return recentData.map((record, index) => ({
+      index: index + 1,
+      neckAngle: Math.abs(parseFloat(record.neckAngle)),
+      shoulderSlope: Math.abs(parseFloat(record.shoulderSlope)),
+      headForward: parseFloat(record.headForward),
+      // 새로운 지표들 추가
+      cervicalLordosis: parseFloat(record.cervicalLordosis || 0),
+      forwardHeadDistance: parseFloat(record.forwardHeadDistance || 0),
+      leftLateralBending: Math.abs(parseFloat(record.leftLateralBending || 0)),
+      leftRotation: Math.abs(parseFloat(record.leftRotation || 0)),
+      shoulderForwardMovement: parseFloat(record.shoulderForwardMovement || 0),
+      timestamp: record.timestamp,
+      date: new Date(record.timestamp).toLocaleDateString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      dateTime: new Date(record.timestamp).toLocaleString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     }));
   }, []);
 
@@ -208,7 +278,7 @@ const PostureData = () => {
           }}
         >
           <p style={{ margin: "0 0 4px 0", fontWeight: "bold" }}>
-            {payload[0].payload.date}
+            {payload[0].payload.dateTime}
           </p>
           <p style={{ margin: "0", color: "#888" }}>
             점수:{" "}
@@ -216,6 +286,48 @@ const PostureData = () => {
               {payload[0].value}점
             </span>
           </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // 자세 지표 툴팁 컴포넌트
+  const MetricsTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          style={{
+            backgroundColor: "white",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            padding: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
+          <p style={{ margin: "0 0 4px 0", fontWeight: "bold" }}>
+            {payload[0].payload.dateTime}
+          </p>
+          {payload.map((entry, index) => {
+            let unit = "°";
+            if (entry.dataKey === "headForward") {
+              unit = "%";
+            } else if (
+              entry.dataKey === "forwardHeadDistance" ||
+              entry.dataKey === "shoulderForwardMovement"
+            ) {
+              unit = "mm";
+            }
+            return (
+              <p key={index} style={{ margin: "2px 0", color: "#888" }}>
+                {entry.name}:{" "}
+                <span style={{ color: entry.color, fontWeight: "bold" }}>
+                  {entry.value}
+                  {unit}
+                </span>
+              </p>
+            );
+          })}
         </div>
       );
     }
@@ -508,9 +620,12 @@ const PostureData = () => {
                   <AreaChart data={prepareChartData(filteredHistory)}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
-                      dataKey="index"
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `#${value}`}
+                      dataKey="dateTime"
+                      tick={{ fontSize: 10 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval="preserveStartEnd"
                     />
                     <YAxis
                       domain={[0, 100]}
@@ -547,6 +662,113 @@ const PostureData = () => {
                       </linearGradient>
                     </defs>
                   </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <HistoryHeader>
+              <h3>자세 분포 분석</h3>
+            </HistoryHeader>
+            {filteredHistory.length > 0 && (
+              <div style={{ height: "300px", marginBottom: "24px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={preparePieChartData(filteredHistory)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {preparePieChartData(filteredHistory).map(
+                        (entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        )
+                      )}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <HistoryHeader>
+              <h3>자세 지표 변화</h3>
+            </HistoryHeader>
+            {filteredHistory.length > 0 && (
+              <div style={{ height: "300px", marginBottom: "24px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={prepareMetricsChartData(filteredHistory)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="dateTime"
+                      tick={{ fontSize: 10 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `${value}°`}
+                    />
+                    <Tooltip content={<MetricsTooltip />} />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="neckAngle"
+                      name="목 각도"
+                      stroke="#FF6B6B"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="shoulderSlope"
+                      name="어깨 기울기"
+                      stroke="#4ECDC4"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="headForward"
+                      name="머리 전방 돌출도"
+                      stroke="#45B7D1"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cervicalLordosis"
+                      name="목 전만각"
+                      stroke="#FFA500"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="leftLateralBending"
+                      name="좌측 측굴 각도"
+                      stroke="#9B59B6"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="leftRotation"
+                      name="좌측 회전 각도"
+                      stroke="#E74C3C"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             )}
