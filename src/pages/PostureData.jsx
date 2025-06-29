@@ -8,39 +8,22 @@ import {
   StatLabel,
   StatValue,
   ChartContainer,
-  HistoryTable,
-  TableHeader,
-  TableRow,
-  TableCell,
   FilterContainer,
   FilterButton,
   EmptyState,
   ExportButton,
   ExcelExportButton,
   ClearButton,
-  PaginationContainer,
-  PaginationInfo,
-  PaginationButtons,
-  PaginationButton,
-  PaginationEllipsis,
   HistoryHeader,
   ToggleButton,
 } from "../styles/PostureData.styles";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+// 차트 컴포넌트들 import
+import ScoreChart from "../components/charts/ScoreChart";
+import PosturePieChart from "../components/charts/PieChart";
+import MetricsChart from "../components/charts/MetricsChart";
+import CustomTooltip from "../components/charts/CustomTooltip";
+import MetricsTooltip from "../components/charts/MetricsTooltip";
+import PostureHistoryTable from "../components/history/PostureHistoryTable";
 
 const PostureData = () => {
   const [postureHistory, setPostureHistory] = useState([]);
@@ -50,6 +33,24 @@ const PostureData = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  const [rechartsLoaded, setRechartsLoaded] = useState(false);
+  const [rechartsComponents, setRechartsComponents] = useState(null);
+
+  // Recharts 라이브러리를 동적으로 로드
+  const loadRecharts = useCallback(async () => {
+    try {
+      const recharts = await import("recharts");
+      setRechartsComponents(recharts);
+      setRechartsLoaded(true);
+    } catch (error) {
+      console.error("Recharts 라이브러리 로드 실패:", error);
+    }
+  }, []);
+
+  // 컴포넌트 마운트 시 Recharts 로드
+  useEffect(() => {
+    loadRecharts();
+  }, [loadRecharts]);
 
   // 점수에 따른 상태 반환
   const getScoreStatus = (score) => {
@@ -76,6 +77,11 @@ const PostureData = () => {
     setPostureHistory(history);
     setFilteredHistory(history);
   }, []);
+
+  // 컴포넌트 마운트 시 히스토리 로드
+  useEffect(() => {
+    loadPostureHistory();
+  }, [loadPostureHistory]);
 
   // 통계 계산
   const calculateStats = useCallback((data) => {
@@ -264,76 +270,6 @@ const PostureData = () => {
     }));
   }, []);
 
-  // 커스텀 툴팁 컴포넌트
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          style={{
-            backgroundColor: "white",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "12px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          }}
-        >
-          <p style={{ margin: "0 0 4px 0", fontWeight: "bold" }}>
-            {payload[0].payload.dateTime}
-          </p>
-          <p style={{ margin: "0", color: "#888" }}>
-            점수:{" "}
-            <span style={{ color: "#1890ff", fontWeight: "bold" }}>
-              {payload[0].value}점
-            </span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // 자세 지표 툴팁 컴포넌트
-  const MetricsTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          style={{
-            backgroundColor: "white",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "12px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          }}
-        >
-          <p style={{ margin: "0 0 4px 0", fontWeight: "bold" }}>
-            {payload[0].payload.dateTime}
-          </p>
-          {payload.map((entry, index) => {
-            let unit = "°";
-            if (entry.dataKey === "headForward") {
-              unit = "%";
-            } else if (
-              entry.dataKey === "forwardHeadDistance" ||
-              entry.dataKey === "shoulderForwardMovement"
-            ) {
-              unit = "mm";
-            }
-            return (
-              <p key={index} style={{ margin: "2px 0", color: "#888" }}>
-                {entry.name}:{" "}
-                <span style={{ color: entry.color, fontWeight: "bold" }}>
-                  {entry.value}
-                  {unit}
-                </span>
-              </p>
-            );
-          })}
-        </div>
-      );
-    }
-    return null;
-  };
-
   // 데이터 내보내기
   const exportData = useCallback(() => {
     // CSV 헤더 생성
@@ -513,10 +449,6 @@ const PostureData = () => {
   }, []);
 
   useEffect(() => {
-    loadPostureHistory();
-  }, [loadPostureHistory]);
-
-  useEffect(() => {
     calculateStats(filteredHistory);
   }, [filteredHistory, calculateStats]);
 
@@ -614,164 +546,38 @@ const PostureData = () => {
             <HistoryHeader>
               <h3>점수 변화 그래프</h3>
             </HistoryHeader>
-            {filteredHistory.length > 0 && (
-              <div style={{ height: "300px", marginBottom: "24px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={prepareChartData(filteredHistory)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="dateTime"
-                      tick={{ fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      domain={[0, 100]}
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `${value}점`}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="score"
-                      stroke="#1890ff"
-                      strokeWidth={2}
-                      fill="url(#colorGradient)"
-                      fillOpacity={0.3}
-                    />
-                    <defs>
-                      <linearGradient
-                        id="colorGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#1890ff"
-                          stopOpacity={0.3}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#1890ff"
-                          stopOpacity={0.1}
-                        />
-                      </linearGradient>
-                    </defs>
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            {filteredHistory.length > 0 &&
+              rechartsLoaded &&
+              rechartsComponents && (
+                <ScoreChart
+                  data={prepareChartData(filteredHistory)}
+                  rechartsComponents={rechartsComponents}
+                />
+              )}
 
             <HistoryHeader>
               <h3>자세 분포 분석</h3>
             </HistoryHeader>
-            {filteredHistory.length > 0 && (
-              <div style={{ height: "300px", marginBottom: "24px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={preparePieChartData(filteredHistory)}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {preparePieChartData(filteredHistory).map(
-                        (entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        )
-                      )}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            {filteredHistory.length > 0 &&
+              rechartsLoaded &&
+              rechartsComponents && (
+                <PosturePieChart
+                  data={preparePieChartData(filteredHistory)}
+                  rechartsComponents={rechartsComponents}
+                />
+              )}
 
             <HistoryHeader>
               <h3>자세 지표 변화</h3>
             </HistoryHeader>
-            {filteredHistory.length > 0 && (
-              <div style={{ height: "300px", marginBottom: "24px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={prepareMetricsChartData(filteredHistory)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="dateTime"
-                      tick={{ fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `${value}°`}
-                    />
-                    <Tooltip content={<MetricsTooltip />} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="neckAngle"
-                      name="목 각도"
-                      stroke="#FF6B6B"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="shoulderSlope"
-                      name="어깨 기울기"
-                      stroke="#4ECDC4"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="headForward"
-                      name="머리 전방 돌출도"
-                      stroke="#45B7D1"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="cervicalLordosis"
-                      name="목 전만각"
-                      stroke="#FFA500"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="leftLateralBending"
-                      name="좌측 측굴 각도"
-                      stroke="#9B59B6"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="leftRotation"
-                      name="좌측 회전 각도"
-                      stroke="#E74C3C"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            {filteredHistory.length > 0 &&
+              rechartsLoaded &&
+              rechartsComponents && (
+                <MetricsChart
+                  data={prepareMetricsChartData(filteredHistory)}
+                  rechartsComponents={rechartsComponents}
+                />
+              )}
 
             <HistoryHeader>
               <h3>자세 기록 히스토리</h3>
@@ -782,109 +588,18 @@ const PostureData = () => {
                 {isHistoryExpanded ? "▼" : "▶"}
               </ToggleButton>
             </HistoryHeader>
-            {isHistoryExpanded && filteredHistory.length > 0 && (
-              <>
-                <HistoryTable>
-                  <thead>
-                    <TableRow>
-                      <TableHeader>날짜/시간</TableHeader>
-                      <TableHeader>점수</TableHeader>
-                      <TableHeader>상태</TableHeader>
-                      <TableHeader>목 각도</TableHeader>
-                      <TableHeader>어깨 기울기</TableHeader>
-                      <TableHeader>머리 전방 돌출</TableHeader>
-                    </TableRow>
-                  </thead>
-                  <tbody>
-                    {currentData
-                      .slice()
-                      .reverse()
-                      .map((record, index) => {
-                        const status = getScoreStatus(record.score);
-                        return (
-                          <TableRow key={index}>
-                            <TableCell>
-                              {formatDate(record.timestamp)}
-                            </TableCell>
-                            <TableCell>{record.score}점</TableCell>
-                            <TableCell color={status.color}>
-                              {status.text}
-                            </TableCell>
-                            <TableCell>{record.neckAngle}°</TableCell>
-                            <TableCell>{record.shoulderSlope}°</TableCell>
-                            <TableCell>{record.headForward}%</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                  </tbody>
-                </HistoryTable>
-
-                {/* 페이지네이션 */}
-                {totalPages > 1 && (
-                  <PaginationContainer>
-                    <PaginationInfo>
-                      {startIndex + 1}-
-                      {Math.min(endIndex, filteredHistory.length)} /{" "}
-                      {filteredHistory.length}개
-                    </PaginationInfo>
-                    <PaginationButtons>
-                      <PaginationButton
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        이전
-                      </PaginationButton>
-
-                      {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter((page) => {
-                          // 현재 페이지 주변 5개 페이지만 표시
-                          return (
-                            page === 1 ||
-                            page === totalPages ||
-                            Math.abs(page - currentPage) <= 2
-                          );
-                        })
-                        .map((page, index, array) => {
-                          // 건너뛴 페이지가 있으면 "..." 표시
-                          if (index > 0 && page - array[index - 1] > 1) {
-                            return (
-                              <React.Fragment key={`ellipsis-${page}`}>
-                                <PaginationEllipsis>...</PaginationEllipsis>
-                                <PaginationButton
-                                  onClick={() => handlePageChange(page)}
-                                  active={currentPage === page}
-                                >
-                                  {page}
-                                </PaginationButton>
-                              </React.Fragment>
-                            );
-                          }
-                          return (
-                            <PaginationButton
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              active={currentPage === page}
-                            >
-                              {page}
-                            </PaginationButton>
-                          );
-                        })}
-
-                      <PaginationButton
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        다음
-                      </PaginationButton>
-                    </PaginationButtons>
-                  </PaginationContainer>
-                )}
-              </>
-            )}
-            {isHistoryExpanded && filteredHistory.length === 0 && (
-              <EmptyState>
-                <p>선택한 기간에 자세 데이터가 없습니다.</p>
-              </EmptyState>
+            {isHistoryExpanded && (
+              <PostureHistoryTable
+                filteredHistory={filteredHistory}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                currentData={currentData}
+                handlePageChange={handlePageChange}
+                getScoreStatus={getScoreStatus}
+                formatDate={formatDate}
+              />
             )}
           </ChartContainer>
         </>

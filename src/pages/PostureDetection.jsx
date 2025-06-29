@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Webcam from "react-webcam";
 import useStore from "../store/useStore";
-import { Pose } from "@mediapipe/pose";
-import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+// MediaPipe 라이브러리들을 동적 임포트로 변경
+// import { Pose } from "@mediapipe/pose";
+// import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import {
   DetectionContainer,
   VideoContainer,
@@ -40,6 +41,7 @@ const PostureDetection = () => {
 
   const poseRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const mediaPipeRef = useRef(null);
 
   const videoConstraints = {
     width: 640,
@@ -47,7 +49,27 @@ const PostureDetection = () => {
     facingMode: "user",
   };
 
+  // MediaPipe 라이브러리들을 동적으로 로드
+  const loadMediaPipe = useCallback(async () => {
+    try {
+      const [{ Pose }, { drawConnectors, drawLandmarks }] = await Promise.all([
+        import("@mediapipe/pose"),
+        import("@mediapipe/drawing_utils"),
+      ]);
+
+      mediaPipeRef.current = { Pose, drawConnectors, drawLandmarks };
+    } catch (error) {
+      console.error("MediaPipe 라이브러리 로드 실패:", error);
+    }
+  }, []);
+
   const initializePose = useCallback(async () => {
+    if (!mediaPipeRef.current) {
+      await loadMediaPipe();
+    }
+
+    const { Pose } = mediaPipeRef.current;
+
     poseRef.current = new Pose({
       locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
@@ -64,9 +86,14 @@ const PostureDetection = () => {
     });
 
     poseRef.current.onResults(onPoseResults);
-  }, []);
+  }, [loadMediaPipe]);
 
   const onPoseResults = useCallback((results) => {
+    if (!mediaPipeRef.current) return;
+
+    const { drawConnectors, drawLandmarks } = mediaPipeRef.current;
+    const { Pose } = mediaPipeRef.current;
+
     const canvasCtx = canvasRef.current.getContext("2d");
     canvasCtx.save();
     canvasCtx.clearRect(
