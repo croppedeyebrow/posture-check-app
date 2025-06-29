@@ -59,6 +59,7 @@ yarn dev
 
 # 빌드
 yarn build
+npx vercel --prod
 ```
 
 ## 🔍 주요 기능
