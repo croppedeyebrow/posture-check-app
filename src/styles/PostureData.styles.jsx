@@ -101,16 +101,18 @@ export const StatValue = styled.div`
 
 export const ChartContainer = styled.div`
   background: ${({ theme }) => theme.colors.surface};
-  padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+`;
 
-  h3 {
-    margin: 0 0 1.5rem 0;
-    color: ${({ theme }) => theme.colors.text};
-    font-size: 1.5rem;
-    font-weight: bold;
-  }
+export const DataHistoryContainer = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
 export const HistoryTable = styled.table`

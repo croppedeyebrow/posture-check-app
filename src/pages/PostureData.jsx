@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import * as XLSX from "xlsx";
 import {
   DataContainer,
@@ -8,6 +8,7 @@ import {
   StatLabel,
   StatValue,
   ChartContainer,
+  DataHistoryContainer,
   FilterContainer,
   FilterButton,
   EmptyState,
@@ -21,36 +22,34 @@ import {
 import ScoreChart from "../components/charts/ScoreChart";
 import PosturePieChart from "../components/charts/PieChart";
 import MetricsChart from "../components/charts/MetricsChart";
-import CustomTooltip from "../components/charts/CustomTooltip";
-import MetricsTooltip from "../components/charts/MetricsTooltip";
 import PostureHistoryTable from "../components/history/PostureHistoryTable";
+// 커스텀 훅들 import
+import usePostureData from "../hooks/usePostureData.jsx";
+import useChartData from "../hooks/useChartData.jsx";
+import usePagination from "../hooks/usePagination.jsx";
+import useRecharts from "../hooks/useRecharts.jsx";
 
 const PostureData = () => {
-  const [postureHistory, setPostureHistory] = useState([]);
-  const [filteredHistory, setFilteredHistory] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [timeFilter, setTimeFilter] = useState("all"); // all, today, week, month
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
-  const [rechartsLoaded, setRechartsLoaded] = useState(false);
-  const [rechartsComponents, setRechartsComponents] = useState(null);
 
-  // Recharts 라이브러리를 동적으로 로드
-  const loadRecharts = useCallback(async () => {
-    try {
-      const recharts = await import("recharts");
-      setRechartsComponents(recharts);
-      setRechartsLoaded(true);
-    } catch (error) {
-      console.error("Recharts 라이브러리 로드 실패:", error);
-    }
-  }, []);
+  // 커스텀 훅들 사용
+  const { filteredHistory, stats, timeFilter, applyTimeFilter, clearData } =
+    usePostureData();
 
-  // 컴포넌트 마운트 시 Recharts 로드
-  useEffect(() => {
-    loadRecharts();
-  }, [loadRecharts]);
+  const { prepareChartData, preparePieChartData, prepareMetricsChartData } =
+    useChartData();
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    currentData,
+    handlePageChange,
+    resetPage,
+  } = usePagination(filteredHistory, 20);
+
+  const { rechartsLoaded, rechartsComponents } = useRecharts();
 
   // 점수에 따른 상태 반환
   const getScoreStatus = (score) => {
@@ -71,204 +70,14 @@ const PostureData = () => {
     });
   };
 
-  // 자세 히스토리 로드
-  const loadPostureHistory = useCallback(() => {
-    const history = JSON.parse(localStorage.getItem("postureHistory") || "[]");
-    setPostureHistory(history);
-    setFilteredHistory(history);
-  }, []);
-
-  // 컴포넌트 마운트 시 히스토리 로드
-  useEffect(() => {
-    loadPostureHistory();
-  }, [loadPostureHistory]);
-
-  // 통계 계산
-  const calculateStats = useCallback((data) => {
-    if (data.length === 0) {
-      setStats(null);
-      return;
-    }
-
-    const avgScore =
-      data.reduce((sum, record) => sum + record.score, 0) / data.length;
-    const goodPostureCount = data.filter((record) => record.score >= 60).length;
-    const poorPostureCount = data.filter((record) => record.score < 50).length;
-    const excellentCount = data.filter((record) => record.score >= 90).length;
-    const normalPostureCount = data.filter(
-      (record) => record.score >= 50 && record.score < 60
-    ).length;
-
-    // 개선도 계산 (최근 10개 vs 이전 10개)
-    const recentScores = data.slice(-10).map((record) => record.score);
-    const previousScores = data.slice(-20, -10).map((record) => record.score);
-
-    let improvement = 0;
-    if (recentScores.length >= 5 && previousScores.length >= 5) {
-      const recentAvg =
-        recentScores.reduce((sum, score) => sum + score, 0) /
-        recentScores.length;
-      const previousAvg =
-        previousScores.reduce((sum, score) => sum + score, 0) /
-        previousScores.length;
-      improvement = recentAvg - previousAvg;
-    }
-
-    // 최고 점수와 최저 점수
-    const maxScore = Math.max(...data.map((record) => record.score));
-    const minScore = Math.min(...data.map((record) => record.score));
-
-    setStats({
-      avgScore: avgScore.toFixed(1),
-      goodPostureCount,
-      poorPostureCount,
-      excellentCount,
-      normalPostureCount,
-      totalRecords: data.length,
-      improvement: improvement.toFixed(1),
-      maxScore,
-      minScore,
-      consistency: ((goodPostureCount / data.length) * 100).toFixed(1),
-    });
-  }, []);
-
-  // 시간 필터 적용
-  const applyTimeFilter = useCallback(
+  // 시간 필터 적용 (페이지 리셋 포함)
+  const handleTimeFilter = useCallback(
     (filter) => {
-      setTimeFilter(filter);
-      setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
-
-      const now = Date.now();
-      let filteredData = [...postureHistory];
-
-      switch (filter) {
-        case "today": {
-          const todayStart = new Date().setHours(0, 0, 0, 0);
-          filteredData = postureHistory.filter(
-            (record) => record.timestamp >= todayStart
-          );
-          break;
-        }
-        case "week": {
-          const weekStart = now - 7 * 24 * 60 * 60 * 1000;
-          filteredData = postureHistory.filter(
-            (record) => record.timestamp >= weekStart
-          );
-          break;
-        }
-        case "month": {
-          const monthStart = now - 30 * 24 * 60 * 60 * 1000;
-          filteredData = postureHistory.filter(
-            (record) => record.timestamp >= monthStart
-          );
-          break;
-        }
-        default:
-          filteredData = postureHistory;
-      }
-
-      setFilteredHistory(filteredData);
-      calculateStats(filteredData);
+      resetPage();
+      applyTimeFilter(filter);
     },
-    [postureHistory, calculateStats]
+    [applyTimeFilter, resetPage]
   );
-
-  // 페이지네이션 계산
-  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredHistory.slice(startIndex, endIndex);
-
-  // 페이지 변경 핸들러
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  // 그래프 데이터 준비
-  const prepareChartData = useCallback((data) => {
-    if (data.length === 0) return [];
-
-    // 최근 50개 데이터만 사용 (그래프가 너무 복잡해지지 않도록)
-    const recentData = data.slice(-50);
-
-    return recentData.map((record, index) => ({
-      index: index + 1,
-      score: record.score,
-      timestamp: record.timestamp,
-      date: new Date(record.timestamp).toLocaleDateString("ko-KR", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      dateTime: new Date(record.timestamp).toLocaleString("ko-KR", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    }));
-  }, []);
-
-  // 자세 분포 파이차트 데이터 준비
-  const preparePieChartData = useCallback((data) => {
-    if (data.length === 0) return [];
-
-    const postureCounts = {
-      perfect: 0,
-      good: 0,
-      average: 0,
-      poor: 0,
-    };
-
-    data.forEach((record) => {
-      if (record.score >= 90) postureCounts.perfect++;
-      else if (record.score >= 60) postureCounts.good++;
-      else if (record.score >= 50) postureCounts.average++;
-      else postureCounts.poor++;
-    });
-
-    return [
-      { name: "완벽한 자세", value: postureCounts.perfect, color: "#2196F3" },
-      { name: "좋은 자세", value: postureCounts.good, color: "#4CAF50" },
-      { name: "보통 자세", value: postureCounts.average, color: "#FF9800" },
-      { name: "나쁜 자세", value: postureCounts.poor, color: "#F44336" },
-    ].filter((item) => item.value > 0);
-  }, []);
-
-  // 자세 지표 선그래프 데이터 준비
-  const prepareMetricsChartData = useCallback((data) => {
-    if (data.length === 0) return [];
-
-    // 최근 30개 데이터만 사용 (지표 그래프는 더 적게)
-    const recentData = data.slice(-30);
-
-    return recentData.map((record, index) => ({
-      index: index + 1,
-      neckAngle: Math.abs(parseFloat(record.neckAngle)),
-      shoulderSlope: Math.abs(parseFloat(record.shoulderSlope)),
-      headForward: parseFloat(record.headForward),
-      // 새로운 지표들 추가
-      cervicalLordosis: parseFloat(record.cervicalLordosis || 0),
-      forwardHeadDistance: parseFloat(record.forwardHeadDistance || 0),
-      leftLateralBending: Math.abs(parseFloat(record.leftLateralBending || 0)),
-      leftRotation: Math.abs(parseFloat(record.leftRotation || 0)),
-      shoulderForwardMovement: parseFloat(record.shoulderForwardMovement || 0),
-      timestamp: record.timestamp,
-      date: new Date(record.timestamp).toLocaleDateString("ko-KR", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      dateTime: new Date(record.timestamp).toLocaleString("ko-KR", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    }));
-  }, []);
 
   // 데이터 내보내기
   const exportData = useCallback(() => {
@@ -434,24 +243,6 @@ const PostureData = () => {
     );
   }, [filteredHistory, getScoreStatus, formatDate, stats]);
 
-  // 데이터 초기화
-  const clearData = useCallback(() => {
-    if (
-      window.confirm(
-        "모든 자세 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-      )
-    ) {
-      localStorage.removeItem("postureHistory");
-      setPostureHistory([]);
-      setFilteredHistory([]);
-      setStats(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    calculateStats(filteredHistory);
-  }, [filteredHistory, calculateStats]);
-
   return (
     <DataContainer>
       <Header>
@@ -468,25 +259,25 @@ const PostureData = () => {
       <FilterContainer>
         <FilterButton
           active={timeFilter === "all"}
-          onClick={() => applyTimeFilter("all")}
+          onClick={() => handleTimeFilter("all")}
         >
           전체
         </FilterButton>
         <FilterButton
           active={timeFilter === "today"}
-          onClick={() => applyTimeFilter("today")}
+          onClick={() => handleTimeFilter("today")}
         >
           오늘
         </FilterButton>
         <FilterButton
           active={timeFilter === "week"}
-          onClick={() => applyTimeFilter("week")}
+          onClick={() => handleTimeFilter("week")}
         >
           이번 주
         </FilterButton>
         <FilterButton
           active={timeFilter === "month"}
-          onClick={() => applyTimeFilter("month")}
+          onClick={() => handleTimeFilter("month")}
         >
           이번 달
         </FilterButton>
@@ -578,7 +369,9 @@ const PostureData = () => {
                   rechartsComponents={rechartsComponents}
                 />
               )}
+          </ChartContainer>
 
+          <DataHistoryContainer>
             <HistoryHeader>
               <h3>자세 기록 히스토리</h3>
               <ToggleButton
@@ -601,7 +394,7 @@ const PostureData = () => {
                 formatDate={formatDate}
               />
             )}
-          </ChartContainer>
+          </DataHistoryContainer>
         </>
       ) : (
         <EmptyState>

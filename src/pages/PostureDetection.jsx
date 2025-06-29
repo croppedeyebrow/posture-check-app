@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Webcam from "react-webcam";
-import useStore from "../store/useStore";
+// 커스텀 훅들 import
+import useMediaPipe from "../hooks/useMediaPipe.jsx";
+import usePostureAnalysis from "../hooks/usePostureAnalysis.jsx";
+import useWebcam from "../hooks/useWebcam.jsx";
 // MediaPipe 라이브러리들을 동적 임포트로 변경
 // import { Pose } from "@mediapipe/pose";
 // import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
@@ -30,18 +33,19 @@ import {
 } from "../styles/PostureDetection.styles";
 
 const PostureDetection = () => {
-  const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [postureStatus, setPostureStatus] = useState("감지 대기 중");
   const [postureData, setPostureData] = useState(null);
   const [notification, setNotification] = useState(null);
-  const { setPosture } = useStore();
 
-  const poseRef = useRef(null);
   const animationFrameRef = useRef(null);
-  const mediaPipeRef = useRef(null);
+
+  // 커스텀 훅들 사용
+  const { mediaPipeRef, poseRef, initializePose, cleanupPose, processFrame } =
+    useMediaPipe();
+  const { analyzePosture } = usePostureAnalysis();
+  const { webcamRef, isStarted, startWebcam, stopWebcam } = useWebcam();
 
   const videoConstraints = {
     width: 640,
@@ -49,425 +53,56 @@ const PostureDetection = () => {
     facingMode: "user",
   };
 
-  // MediaPipe 라이브러리들을 동적으로 로드
-  const loadMediaPipe = useCallback(async () => {
-    try {
-      const [{ Pose }, { drawConnectors, drawLandmarks }] = await Promise.all([
-        import("@mediapipe/pose"),
-        import("@mediapipe/drawing_utils"),
-      ]);
+  const onPoseResults = useCallback(
+    (results) => {
+      if (!mediaPipeRef.current) return;
 
-      mediaPipeRef.current = { Pose, drawConnectors, drawLandmarks };
-    } catch (error) {
-      console.error("MediaPipe 라이브러리 로드 실패:", error);
-    }
-  }, []);
+      const { drawConnectors, drawLandmarks } = mediaPipeRef.current;
+      const { Pose } = mediaPipeRef.current;
 
-  const initializePose = useCallback(async () => {
-    if (!mediaPipeRef.current) {
-      await loadMediaPipe();
-    }
-
-    const { Pose } = mediaPipeRef.current;
-
-    poseRef.current = new Pose({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-      },
-    });
-
-    poseRef.current.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      enableSegmentation: false,
-      smoothSegmentation: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-
-    poseRef.current.onResults(onPoseResults);
-  }, [loadMediaPipe]);
-
-  const onPoseResults = useCallback((results) => {
-    if (!mediaPipeRef.current) return;
-
-    const { drawConnectors, drawLandmarks } = mediaPipeRef.current;
-    const { Pose } = mediaPipeRef.current;
-
-    const canvasCtx = canvasRef.current.getContext("2d");
-    canvasCtx.save();
-    canvasCtx.clearRect(
-      0,
-      0,
-      canvasRef.current.width,
-      canvasRef.current.height
-    );
-    canvasCtx.drawImage(
-      results.image,
-      0,
-      0,
-      canvasRef.current.width,
-      canvasRef.current.height
-    );
-
-    if (results.poseLandmarks) {
-      drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS, {
-        color: "#00FF00",
-        lineWidth: 2,
-      });
-      drawLandmarks(canvasCtx, results.poseLandmarks, {
-        color: "#FF0000",
-        lineWidth: 1,
-        radius: 3,
-      });
-
-      // 자세 분석
-      analyzePosture(results.poseLandmarks);
-    }
-
-    canvasCtx.restore();
-  }, []);
-
-  const analyzePosture = useCallback(
-    (landmarks) => {
-      if (!landmarks) return;
-
-      // 주요 랜드마크 추출
-      const nose = landmarks[0];
-      const leftShoulder = landmarks[11];
-      const rightShoulder = landmarks[12];
-      const leftEar = landmarks[7];
-      const rightEar = landmarks[8];
-      const leftEye = landmarks[2];
-      const rightEye = landmarks[5];
-      const leftHip = landmarks[23];
-      const rightHip = landmarks[24];
-      const leftElbow = landmarks[13];
-      const rightElbow = landmarks[14];
-
-      // 어깨 중점 계산
-      const shoulderMidpoint = {
-        x: (leftShoulder.x + rightShoulder.x) / 2,
-        y: (leftShoulder.y + rightShoulder.y) / 2,
-      };
-
-      // 1. 목 각도 계산 (코와 어깨 중점)
-      const neckAngle =
-        Math.atan2(nose.y - shoulderMidpoint.y, nose.x - shoulderMidpoint.x) *
-        (180 / Math.PI);
-
-      // 2. 어깨 기울기 계산
-      const shoulderSlope =
-        Math.atan2(
-          rightShoulder.y - leftShoulder.y,
-          rightShoulder.x - leftShoulder.x
-        ) *
-        (180 / Math.PI);
-
-      // 3. 머리 전방 돌출도 계산 (코와 어깨 중점의 수직 거리)
-      const headForward = Math.abs(nose.x - shoulderMidpoint.x);
-
-      // 4. 어깨 높이 차이 계산
-      const shoulderHeightDiff = Math.abs(leftShoulder.y - rightShoulder.y);
-
-      // 새로운 지표들 계산
-
-      // 5. 목 전만각 (Cervical Lordosis) - 목의 전만 곡선 각도
-      const cervicalLordosis =
-        Math.atan2(nose.y - leftShoulder.y, nose.x - leftShoulder.x) *
-        (180 / Math.PI);
-
-      // 6. Forward Head Distance (mm 단위로 변환, 화면 크기 기준)
-      const forwardHeadDistance = Math.abs(nose.x - shoulderMidpoint.x) * 640; // 화면 너비 기준
-
-      // 7. 좌/우 측굴 각도 (Lateral Bending)
-      const leftLateralBending =
-        Math.atan2(leftEar.y - leftShoulder.y, leftEar.x - leftShoulder.x) *
-        (180 / Math.PI);
-      const rightLateralBending =
-        Math.atan2(rightEar.y - rightShoulder.y, rightEar.x - rightShoulder.x) *
-        (180 / Math.PI);
-
-      // 8. 좌/우 회전 각도 (Rotation)
-      const leftRotation =
-        Math.atan2(leftEye.y - rightEye.y, leftEye.x - rightEye.x) *
-        (180 / Math.PI);
-
-      // 9. 좌/우 어깨 높이 차이 (mm 단위)
-      const leftShoulderHeightDiff =
-        Math.abs(leftShoulder.y - rightShoulder.y) * 480; // 화면 높이 기준
-
-      // 10. 견갑골 돌출 여부 (Scapular Winging)
-      // 어깨와 팔꿈치의 상대적 위치로 판단
-      const leftScapularWinging = Math.abs(leftShoulder.x - leftElbow.x) > 0.1;
-      const rightScapularWinging =
-        Math.abs(rightShoulder.x - rightElbow.x) > 0.1;
-
-      // 11. 어깨 전방 이동 (Shoulder Forward Movement)
-      const shoulderForwardMovement =
-        Math.abs(shoulderMidpoint.x - (leftHip.x + rightHip.x) / 2) * 640;
-
-      // 자세 상태 판단
-      let status = "감지 대기 중";
-      let issues = [];
-      let score = 100;
-      let totalDeduction = 0;
-
-      // 기존 검사 로직
-      // 목 각도 검사 (정상: -45° ~ 45°) - 더 관대한 기준
-      if (Math.abs(neckAngle) > 45) {
-        issues.push({
-          problem: "목이 많이 기울어져 있습니다",
-          solution:
-            "목을 중앙으로 돌리고, 턱을 가슴에 가깝게 당겨주세요. 목 스트레칭을 정기적으로 해주세요.",
-        });
-        status = "주의";
-        totalDeduction += 12;
-      } else if (Math.abs(neckAngle) > 30) {
-        issues.push({
-          problem: "목이 약간 기울어져 있습니다",
-          solution: "목을 중앙으로 돌리고, 균형을 맞춰주세요.",
-        });
-        totalDeduction += 8;
-      }
-
-      // 어깨 기울기 검사 (정상: -25° ~ 25°) - 더 관대한 기준
-      if (Math.abs(shoulderSlope) > 25) {
-        issues.push({
-          problem: "어깨가 많이 기울어져 있습니다",
-          solution:
-            "어깨를 수평으로 맞추고, 어깨 스트레칭을 해주세요. 한쪽 어깨에만 무게를 실지 마세요.",
-        });
-        status = "주의";
-        totalDeduction += 10;
-      } else if (Math.abs(shoulderSlope) > 15) {
-        issues.push({
-          problem: "어깨가 약간 기울어져 있습니다",
-          solution: "어깨를 수평으로 맞추고 균형을 잡아주세요.",
-        });
-        totalDeduction += 6;
-      }
-
-      // 머리 전방 돌출 검사 (정상: ≤ 20%) - 더 관대한 기준
-      if (headForward > 0.2) {
-        issues.push({
-          problem: "머리가 많이 앞으로 나와 있습니다",
-          solution:
-            "턱을 뒤로 당기고, 목을 뒤로 젖혀주세요. 모니터를 눈높이에 맞춰주세요.",
-        });
-        status = "주의";
-        totalDeduction += 12;
-      } else if (headForward > 0.15) {
-        issues.push({
-          problem: "머리가 약간 앞으로 나와 있습니다",
-          solution: "턱을 뒤로 당기고 목을 중앙에 위치시켜주세요.",
-        });
-        totalDeduction += 8;
-      }
-
-      // 어깨 높이 차이 검사 (정상: ≤ 12%) - 더 관대한 기준
-      if (shoulderHeightDiff > 0.12) {
-        issues.push({
-          problem: "어깨 높이가 많이 다릅니다",
-          solution:
-            "어깨를 수평으로 맞추고, 어깨 스트레칭을 해주세요. 한쪽에만 무게를 실지 마세요.",
-        });
-        totalDeduction += 8;
-      } else if (shoulderHeightDiff > 0.08) {
-        issues.push({
-          problem: "어깨 높이가 약간 다릅니다",
-          solution: "어깨를 수평으로 맞추고 균형을 잡아주세요.",
-        });
-        totalDeduction += 4;
-      }
-
-      // 새로운 지표 검사
-      // 목 전만각 검사 (정상: 20° ~ 40°)
-      if (cervicalLordosis < 20 || cervicalLordosis > 40) {
-        issues.push({
-          problem: "목의 곡선이 비정상적입니다",
-          solution: "목 스트레칭을 하고, 목을 자연스럽게 유지해주세요.",
-        });
-        totalDeduction += 5;
-      }
-
-      // Forward Head Distance 검사 (정상: ≤ 50mm)
-      if (forwardHeadDistance > 50) {
-        issues.push({
-          problem: "머리가 너무 앞으로 나와 있습니다",
-          solution: "턱을 뒤로 당기고, 모니터를 눈높이에 맞춰주세요.",
-        });
-        totalDeduction += 8;
-      }
-
-      // 측굴 각도 검사 (정상: -10° ~ 10°)
-      if (
-        Math.abs(leftLateralBending) > 10 ||
-        Math.abs(rightLateralBending) > 10
-      ) {
-        issues.push({
-          problem: "목이 좌우로 많이 기울어져 있습니다",
-          solution: "목을 중앙으로 돌리고, 균형을 맞춰주세요.",
-        });
-        totalDeduction += 6;
-      }
-
-      // 회전 각도 검사 (정상: -15° ~ 15°)
-      if (Math.abs(leftRotation) > 15) {
-        issues.push({
-          problem: "목이 좌우로 많이 돌아가 있습니다",
-          solution: "목을 중앙으로 돌리고, 정면을 바라보세요.",
-        });
-        totalDeduction += 5;
-      }
-
-      // 견갑골 돌출 검사
-      if (leftScapularWinging || rightScapularWinging) {
-        issues.push({
-          problem: "견갑골이 돌출되어 있습니다",
-          solution: "어깨를 뒤로 당기고, 견갑골을 모아주세요.",
-        });
-        totalDeduction += 7;
-      }
-
-      // 어깨 전방 이동 검사 (정상: ≤ 30mm)
-      if (shoulderForwardMovement > 30) {
-        issues.push({
-          problem: "어깨가 너무 앞으로 나와 있습니다",
-          solution: "어깨를 뒤로 당기고, 가슴을 펴주세요.",
-        });
-        totalDeduction += 6;
-      }
-
-      // 최종 점수 계산 (총 감점을 적용)
-      score = Math.max(0, 100 - totalDeduction);
-
-      // 점수에 따른 최종 상태 결정
-      if (score >= 90) {
-        status = "완벽한 자세";
-        if (issues.length === 0) {
-          issues.push({
-            problem: "완벽한 자세입니다! 👍",
-            solution:
-              "현재 자세를 유지해주세요. 정기적인 스트레칭도 잊지 마세요.",
-          });
-        }
-      } else if (score >= 60) {
-        status = "좋은 자세";
-        if (issues.length === 0) {
-          issues.push({
-            problem: "좋은 자세입니다",
-            solution: "현재 자세를 유지하고 더욱 개선해보세요.",
-          });
-        }
-      } else if (score >= 50) {
-        status = "보통 자세";
-        if (issues.length === 0) {
-          issues.push({
-            problem: "전반적으로 괜찮은 자세입니다",
-            solution: "더 나은 자세를 위해 위의 피드백을 참고해주세요.",
-          });
-        }
-      } else {
-        status = "나쁜 자세";
-        if (issues.length === 0) {
-          issues.push({
-            problem: "자세를 개선해보세요",
-            solution: "정기적인 스트레칭과 자세 교정 운동을 해주세요.",
-          });
-        }
-      }
-
-      // 알림 설정
-      if (score < 50 && !notification) {
-        setNotification({
-          message: "자세가 많이 좋지 않습니다! 자세를 교정해주세요.",
-          type: "warning",
-        });
-
-        // 브라우저 알림 (사용자가 허용한 경우)
-        if (Notification.permission === "granted") {
-          new Notification("자세 교정 알림", {
-            body: "현재 자세가 많이 좋지 않습니다. 자세를 교정해주세요.",
-            icon: "/vite.svg",
-          });
-        }
-      } else if (score >= 50 && notification) {
-        setNotification(null);
-      }
-
-      setPostureStatus(status);
-      setPostureData({
-        neckAngle: neckAngle.toFixed(1),
-        shoulderSlope: shoulderSlope.toFixed(1),
-        headForward: (headForward * 100).toFixed(1),
-        shoulderHeightDiff: (shoulderHeightDiff * 100).toFixed(1),
-        score: score,
-        issues,
-        cervicalLordosis: cervicalLordosis.toFixed(1),
-        forwardHeadDistance: forwardHeadDistance.toFixed(1),
-        leftLateralBending: leftLateralBending.toFixed(1),
-        rightLateralBending: rightLateralBending.toFixed(1),
-        leftRotation: leftRotation.toFixed(1),
-        leftShoulderHeightDiff: leftShoulderHeightDiff.toFixed(1),
-        leftScapularWinging: leftScapularWinging,
-        rightScapularWinging: rightScapularWinging,
-        shoulderForwardMovement: shoulderForwardMovement.toFixed(1),
-      });
-
-      // 전역 상태 업데이트
-      setPosture({
-        status,
-        neckAngle,
-        shoulderSlope,
-        headForward,
-        shoulderHeightDiff,
-        score,
-        timestamp: Date.now(),
-        cervicalLordosis,
-        forwardHeadDistance,
-        leftLateralBending,
-        rightLateralBending,
-        leftRotation,
-        leftShoulderHeightDiff,
-        leftScapularWinging,
-        rightScapularWinging,
-        shoulderForwardMovement,
-      });
-
-      // 로컬 스토리지에 자세 데이터 저장
-      const postureHistory = JSON.parse(
-        localStorage.getItem("postureHistory") || "[]"
+      const canvasCtx = canvasRef.current.getContext("2d");
+      canvasCtx.save();
+      canvasCtx.clearRect(
+        0,
+        0,
+        canvasRef.current.width,
+        canvasRef.current.height
       );
-      const newPostureRecord = {
-        status,
-        neckAngle,
-        shoulderSlope,
-        headForward,
-        shoulderHeightDiff,
-        score,
-        timestamp: Date.now(),
-        cervicalLordosis,
-        forwardHeadDistance,
-        leftLateralBending,
-        rightLateralBending,
-        leftRotation,
-        leftShoulderHeightDiff,
-        leftScapularWinging,
-        rightScapularWinging,
-        shoulderForwardMovement,
-      };
+      canvasCtx.drawImage(
+        results.image,
+        0,
+        0,
+        canvasRef.current.width,
+        canvasRef.current.height
+      );
 
-      postureHistory.push(newPostureRecord);
+      if (results.poseLandmarks) {
+        drawConnectors(
+          canvasCtx,
+          results.poseLandmarks,
+          Pose.POSE_CONNECTIONS,
+          {
+            color: "#00FF00",
+            lineWidth: 2,
+          }
+        );
+        drawLandmarks(canvasCtx, results.poseLandmarks, {
+          color: "#FF0000",
+          lineWidth: 1,
+          radius: 3,
+        });
 
-      // 최근 100개의 기록만 유지
-      if (postureHistory.length > 100) {
-        postureHistory.splice(0, postureHistory.length - 100);
+        // 자세 분석
+        const analysisResult = analyzePosture(results.poseLandmarks);
+        if (analysisResult) {
+          setPostureStatus(analysisResult.status);
+          setPostureData(analysisResult.postureData);
+        }
       }
 
-      localStorage.setItem("postureHistory", JSON.stringify(postureHistory));
+      canvasCtx.restore();
     },
-    [setPosture]
+    [mediaPipeRef, analyzePosture]
   );
 
   const startDetection = useCallback(async () => {
@@ -477,36 +112,34 @@ const PostureDetection = () => {
         await Notification.requestPermission();
       }
 
-      await initializePose();
+      await initializePose(onPoseResults);
       setIsDetecting(true);
-      setIsWebcamActive(true);
+      startWebcam();
     } catch (error) {
       console.error("자세 감지 시작 오류:", error);
       setPostureStatus("초기화 오류");
     }
-  }, [initializePose]);
+  }, [initializePose, onPoseResults, startWebcam]);
 
   const stopDetection = useCallback(() => {
     setIsDetecting(false);
-    setIsWebcamActive(false);
+    stopWebcam();
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
-  }, []);
+  }, [stopWebcam]);
 
-  const processFrame = useCallback(async () => {
+  const processFrameLoop = useCallback(async () => {
     if (webcamRef.current && poseRef.current && isDetecting) {
       const video = webcamRef.current.video;
-      if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-        await poseRef.current.send({ image: video });
-      }
-      animationFrameRef.current = requestAnimationFrame(processFrame);
+      await processFrame(video);
+      animationFrameRef.current = requestAnimationFrame(processFrameLoop);
     }
-  }, [isDetecting]);
+  }, [isDetecting, processFrame, webcamRef, poseRef]);
 
   useEffect(() => {
     if (isDetecting) {
-      processFrame();
+      processFrameLoop();
     }
 
     return () => {
@@ -514,15 +147,13 @@ const PostureDetection = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isDetecting, processFrame]);
+  }, [isDetecting, processFrameLoop]);
 
   useEffect(() => {
     return () => {
-      if (poseRef.current) {
-        poseRef.current.close();
-      }
+      cleanupPose();
     };
-  }, []);
+  }, [cleanupPose]);
 
   return (
     <DetectionContainer>
@@ -546,7 +177,7 @@ const PostureDetection = () => {
       </ControlsContainer>
 
       <VideoContainer>
-        {isWebcamActive && (
+        {isStarted && (
           <StyledWebcam
             ref={webcamRef}
             audio={false}
@@ -555,7 +186,6 @@ const PostureDetection = () => {
             onUserMedia={() => console.log("웹캠 시작됨")}
             onUserMediaError={(error) => {
               console.error("웹캠 오류:", error);
-              setIsWebcamActive(false);
               setIsDetecting(false);
             }}
           />
