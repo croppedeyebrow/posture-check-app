@@ -117,6 +117,7 @@ export const DataHistoryContainer = styled.div`
 
 export const HistoryTable = styled.table`
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
@@ -124,13 +125,21 @@ export const HistoryTable = styled.table`
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
+export const HistoryTableScroll = styled.div`
+  overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+`;
+
 export const TableHeader = styled.th`
   background: ${({ theme }) => theme.colors.primary};
   color: white;
   padding: 1rem;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   font-size: 0.9rem;
+  line-height: 1.3;
+  white-space: pre-line;
 `;
 
 export const TableRow = styled.tr`
@@ -309,5 +318,16 @@ export const ToggleButton = styled.button`
   &:hover {
     background: ${({ theme }) => theme.colors.background};
     transform: scale(1.1);
+  }
+`;
+
+export const HeaderMultiline = styled.span`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  span {
+    font-size: 1em;
+    font-weight: 400;
   }
 `;

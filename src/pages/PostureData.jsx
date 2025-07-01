@@ -28,9 +28,13 @@ import usePostureData from "../hooks/usePostureData.jsx";
 import useChartData from "../hooks/useChartData.jsx";
 import usePagination from "../hooks/usePagination.jsx";
 import useRecharts from "../hooks/useRecharts.jsx";
+import DateRangePicker from "../components/common/DateRangePicker";
 
 const PostureData = () => {
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  // 날짜 필터 상태
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   // 커스텀 훅들 사용
   const { filteredHistory, stats, timeFilter, applyTimeFilter, clearData } =
@@ -78,6 +82,14 @@ const PostureData = () => {
     },
     [applyTimeFilter, resetPage]
   );
+
+  // 날짜 필터링된 히스토리
+  const filteredByDate = filteredHistory.filter((item) => {
+    const t = item.timestamp;
+    const afterStart = !startDate || t >= startDate.getTime();
+    const beforeEnd = !endDate || t <= endDate.setHours(23, 59, 59, 999);
+    return afterStart && beforeEnd;
+  });
 
   // 데이터 내보내기
   const exportData = useCallback(() => {
@@ -365,7 +377,7 @@ const PostureData = () => {
               rechartsLoaded &&
               rechartsComponents && (
                 <MetricsChart
-                  data={prepareMetricsChartData(filteredHistory)}
+                  data={prepareMetricsChartData(filteredByDate)}
                   rechartsComponents={rechartsComponents}
                 />
               )}
@@ -381,9 +393,20 @@ const PostureData = () => {
                 {isHistoryExpanded ? "▼" : "▶"}
               </ToggleButton>
             </HistoryHeader>
+            {/* 기간 선택 달력: 제목 바로 아래에 위치 */}
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={({ startDate, endDate }) => {
+                setStartDate(startDate);
+                setEndDate(endDate);
+              }}
+              label={null}
+              style={{ marginBottom: 8 }}
+            />
             {isHistoryExpanded && (
               <PostureHistoryTable
-                filteredHistory={filteredHistory}
+                filteredHistory={filteredByDate}
                 currentPage={currentPage}
                 totalPages={totalPages}
                 startIndex={startIndex}

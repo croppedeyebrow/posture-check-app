@@ -68,8 +68,8 @@ const useChartData = () => {
       // 새로운 지표들 추가
       cervicalLordosis: parseFloat(record.cervicalLordosis || 0),
       forwardHeadDistance: parseFloat(record.forwardHeadDistance || 0),
-      leftLateralBending: Math.abs(parseFloat(record.leftLateralBending || 0)),
-      leftRotation: Math.abs(parseFloat(record.leftRotation || 0)),
+      headTilt: Math.abs(parseFloat(record.headTilt || 0)),
+      headRotation: Math.abs(parseFloat(record.headRotation || 0)),
       shoulderForwardMovement: parseFloat(record.shoulderForwardMovement || 0),
       timestamp: record.timestamp,
       date: new Date(record.timestamp).toLocaleDateString("ko-KR", {

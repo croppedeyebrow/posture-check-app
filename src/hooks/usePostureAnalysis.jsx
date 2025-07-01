@@ -56,29 +56,21 @@ const usePostureAnalysis = () => {
       // 6. Forward Head Distance (mm 단위로 변환, 화면 크기 기준)
       const forwardHeadDistance = Math.abs(nose.x - shoulderMidpoint.x) * 640;
 
-      // 7. 좌/우 측굴 각도 (Lateral Bending)
-      const leftLateralBending =
+      // 7. 머리 좌우 기울기 (Head Lateral Tilt)
+      const headTilt =
         Math.atan2(leftEar.y - leftShoulder.y, leftEar.x - leftShoulder.x) *
         (180 / Math.PI);
-      const rightLateralBending =
-        Math.atan2(rightEar.y - rightShoulder.y, rightEar.x - rightShoulder.x) *
-        (180 / Math.PI);
 
-      // 8. 좌/우 회전 각도 (Rotation)
-      const leftRotation =
-        Math.atan2(leftEye.y - rightEye.y, leftEye.x - rightEye.x) *
-        (180 / Math.PI);
-
-      // 9. 좌/우 어깨 높이 차이 (mm 단위)
+      // 8. 어깨 높이 차이 (mm 단위)
       const leftShoulderHeightDiff =
         Math.abs(leftShoulder.y - rightShoulder.y) * 480;
 
-      // 10. 견갑골 돌출 여부 (Scapular Winging)
+      // 9. 견갑골 돌출 여부 (Scapular Winging)
       const leftScapularWinging = Math.abs(leftShoulder.x - leftElbow.x) > 0.1;
       const rightScapularWinging =
         Math.abs(rightShoulder.x - rightElbow.x) > 0.1;
 
-      // 11. 어깨 전방 이동 (Shoulder Forward Movement)
+      // 10. 어깨 전방 이동 (Shoulder Forward Movement)
       const shoulderForwardMovement =
         Math.abs(shoulderMidpoint.x - (leftHip.x + rightHip.x) / 2) * 640;
 
@@ -179,25 +171,13 @@ const usePostureAnalysis = () => {
         totalDeduction += 8;
       }
 
-      // 측굴 각도 검사 (정상: -15° ~ 15°)
-      if (
-        Math.abs(leftLateralBending) > 15 ||
-        Math.abs(rightLateralBending) > 15
-      ) {
+      // 머리 좌우 기울기 검사 (정상: -15° ~ 15°)
+      if (Math.abs(headTilt) > 15) {
         issues.push({
           problem: "목이 측면으로 많이 기울어져 있습니다",
           solution: "목을 중앙으로 돌려주세요.",
         });
         totalDeduction += 6;
-      }
-
-      // 회전 각도 검사 (정상: -20° ~ 20°)
-      if (Math.abs(leftRotation) > 20) {
-        issues.push({
-          problem: "목이 많이 회전되어 있습니다",
-          solution: "목을 중앙으로 돌려주세요.",
-        });
-        totalDeduction += 5;
       }
 
       // 어깨 높이 차이 검사 (정상: 20mm 이하)
@@ -250,9 +230,7 @@ const usePostureAnalysis = () => {
         issues,
         cervicalLordosis: cervicalLordosis.toFixed(1),
         forwardHeadDistance: forwardHeadDistance.toFixed(1),
-        leftLateralBending: leftLateralBending.toFixed(1),
-        rightLateralBending: rightLateralBending.toFixed(1),
-        leftRotation: leftRotation.toFixed(1),
+        headTilt: headTilt.toFixed(1),
         leftShoulderHeightDiff: leftShoulderHeightDiff.toFixed(1),
         leftScapularWinging: leftScapularWinging,
         rightScapularWinging: rightScapularWinging,
@@ -270,9 +248,7 @@ const usePostureAnalysis = () => {
         timestamp: Date.now(),
         cervicalLordosis,
         forwardHeadDistance,
-        leftLateralBending,
-        rightLateralBending,
-        leftRotation,
+        headTilt,
         leftShoulderHeightDiff,
         leftScapularWinging,
         rightScapularWinging,
@@ -293,9 +269,7 @@ const usePostureAnalysis = () => {
         timestamp: Date.now(),
         cervicalLordosis,
         forwardHeadDistance,
-        leftLateralBending,
-        rightLateralBending,
-        leftRotation,
+        headTilt,
         leftShoulderHeightDiff,
         leftScapularWinging,
         rightScapularWinging,

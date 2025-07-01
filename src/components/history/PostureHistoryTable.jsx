@@ -10,6 +10,8 @@ import {
   PaginationButton,
   PaginationEllipsis,
   EmptyState,
+  HeaderMultiline,
+  HistoryTableScroll,
 } from "../../styles/PostureData.styles";
 
 const PostureHistoryTable = ({
@@ -33,36 +35,65 @@ const PostureHistoryTable = ({
 
   return (
     <>
-      <HistoryTable>
-        <thead>
-          <TableRow>
-            <TableHeader>날짜/시간</TableHeader>
-            <TableHeader>점수</TableHeader>
-            <TableHeader>상태</TableHeader>
-            <TableHeader>목 각도</TableHeader>
-            <TableHeader>어깨 기울기</TableHeader>
-            <TableHeader>머리 전방 돌출</TableHeader>
-          </TableRow>
-        </thead>
-        <tbody>
-          {currentData
-            .slice()
-            .reverse()
-            .map((record, index) => {
-              const status = getScoreStatus(record.score);
-              return (
-                <TableRow key={index}>
-                  <TableCell>{formatDate(record.timestamp)}</TableCell>
-                  <TableCell>{record.score}점</TableCell>
-                  <TableCell color={status.color}>{status.text}</TableCell>
-                  <TableCell>{record.neckAngle}°</TableCell>
-                  <TableCell>{record.shoulderSlope}°</TableCell>
-                  <TableCell>{record.headForward}%</TableCell>
-                </TableRow>
-              );
-            })}
-        </tbody>
-      </HistoryTable>
+      <HistoryTableScroll>
+        <HistoryTable>
+          <thead>
+            <TableRow>
+              <TableHeader style={{ minWidth: "80px", whiteSpace: "nowrap" }}>
+                날짜/시간
+              </TableHeader>
+              <TableHeader style={{ minWidth: "60px", whiteSpace: "nowrap" }}>
+                점수
+              </TableHeader>
+              <TableHeader style={{ minWidth: "60px", whiteSpace: "nowrap" }}>
+                상태
+              </TableHeader>
+              <TableHeader>머리 전방 돌출</TableHeader>
+              <TableHeader style={{ minWidth: "90px" }}>
+                <HeaderMultiline>
+                  머리 좌우<span>기울기</span>
+                </HeaderMultiline>
+              </TableHeader>
+              <TableHeader style={{ minWidth: "90px" }}>
+                <HeaderMultiline>
+                  머리 좌우<span>회전</span>
+                </HeaderMultiline>
+              </TableHeader>
+              <TableHeader>목 각도</TableHeader>
+              <TableHeader style={{ minWidth: "90px" }}>목 전만각</TableHeader>
+              <TableHeader>어깨 기울기</TableHeader>
+            </TableRow>
+          </thead>
+          <tbody>
+            {currentData
+              .slice()
+              .reverse()
+              .map((record, index) => {
+                const status = getScoreStatus(record.score);
+                return (
+                  <TableRow key={index}>
+                    <TableCell>{formatDate(record.timestamp)}</TableCell>
+                    <TableCell style={{ whiteSpace: "nowrap" }}>
+                      {record.score}점
+                    </TableCell>
+                    <TableCell
+                      style={{ whiteSpace: "nowrap" }}
+                      color={status.color}
+                    >
+                      {status.text}
+                    </TableCell>
+                    <TableCell>{record.headForward}%</TableCell>
+                    <TableCell>{record.headTilt}°</TableCell>
+                    <TableCell>{record.headRotation}°</TableCell>
+                    <TableCell>{record.neckAngle}°</TableCell>
+                    <TableCell>{record.cervicalLordosis}°</TableCell>
+                    <TableCell>{record.shoulderSlope}°</TableCell>
+                  </TableRow>
+                );
+              })}
+          </tbody>
+        </HistoryTable>
+      </HistoryTableScroll>
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
