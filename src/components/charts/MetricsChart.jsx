@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import MetricsTooltip from "./MetricsTooltip";
-import DateRangePicker from "../common/DateRangePicker";
+import CustomDatePicker from "../common/CustomDatePicker";
 
 const METRIC_LINES = [
   {
@@ -65,22 +65,35 @@ const MetricsChart = ({ data, rechartsComponents }) => {
   // 날짜 필터링
   const filteredData = data.filter((item) => {
     const t = item.timestamp || new Date(item.dateTime).getTime();
-    const afterStart = !startDate || t >= startDate.getTime();
-    const beforeEnd = !endDate || t <= endDate.setHours(23, 59, 59, 999);
+    const afterStart = !startDate || t >= new Date(startDate).getTime();
+    const beforeEnd =
+      !endDate || t <= new Date(endDate).setHours(23, 59, 59, 999);
     return afterStart && beforeEnd;
   });
 
   return (
     <div style={{ height: "370px", marginBottom: "24px" }}>
       {/* 날짜 선택 달력 */}
-      <DateRangePicker
-        startDate={startDate}
-        endDate={endDate}
-        onChange={({ startDate, endDate }) => {
-          setStartDate(startDate);
-          setEndDate(endDate);
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 8,
         }}
-      />
+      >
+        <CustomDatePicker
+          value={startDate}
+          onChange={setStartDate}
+          placeholder="시작일 선택"
+        />
+        <span>~</span>
+        <CustomDatePicker
+          value={endDate}
+          onChange={setEndDate}
+          placeholder="종료일 선택"
+        />
+      </div>
       {/* 지표 선택 토글 버튼 */}
       <div
         style={{ display: "flex", gap: 12, marginBottom: 8, flexWrap: "wrap" }}

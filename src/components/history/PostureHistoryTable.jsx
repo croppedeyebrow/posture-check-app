@@ -62,6 +62,9 @@ const PostureHistoryTable = ({
               <TableHeader>목 각도</TableHeader>
               <TableHeader style={{ minWidth: "90px" }}>목 전만각</TableHeader>
               <TableHeader>어깨 기울기</TableHeader>
+              <TableHeader style={{ minWidth: "90px" }}>
+                어깨 전방 이동
+              </TableHeader>
             </TableRow>
           </thead>
           <tbody>
@@ -88,6 +91,7 @@ const PostureHistoryTable = ({
                     <TableCell>{record.neckAngle}°</TableCell>
                     <TableCell>{record.cervicalLordosis}°</TableCell>
                     <TableCell>{record.shoulderSlope}°</TableCell>
+                    <TableCell>{record.shoulderForwardMovement}mm</TableCell>
                   </TableRow>
                 );
               })}

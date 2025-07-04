@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
-import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   DataContainer,
   Header,
@@ -28,7 +29,7 @@ import usePostureData from "../hooks/usePostureData.jsx";
 import useChartData from "../hooks/useChartData.jsx";
 import usePagination from "../hooks/usePagination.jsx";
 import useRecharts from "../hooks/useRecharts.jsx";
-import DateRangePicker from "../components/common/DateRangePicker";
+import CustomDatePicker from "../components/common/CustomDatePicker";
 
 const PostureData = () => {
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
@@ -86,14 +87,15 @@ const PostureData = () => {
   // 날짜 필터링된 히스토리
   const filteredByDate = filteredHistory.filter((item) => {
     const t = item.timestamp;
-    const afterStart = !startDate || t >= startDate.getTime();
-    const beforeEnd = !endDate || t <= endDate.setHours(23, 59, 59, 999);
+    const afterStart = !startDate || t >= new Date(startDate).getTime();
+    const beforeEnd =
+      !endDate || t <= new Date(endDate).setHours(23, 59, 59, 999);
     return afterStart && beforeEnd;
   });
 
   // 데이터 내보내기
   const exportData = useCallback(() => {
-    // CSV 헤더 생성
+    // CSV 헤더 생성 (최신 지표 포함)
     const headers = [
       "날짜/시간",
       "점수",
@@ -102,6 +104,14 @@ const PostureData = () => {
       "어깨 기울기(도)",
       "머리 전방 돌출도(%)",
       "어깨 높이 차이(%)",
+      "목 전만각(도)",
+      "머리 전방 이동 거리(mm)",
+      "머리 좌우 기울기(도)",
+      "머리 좌우 회전(도)",
+      "어깨 높이 차이(mm)",
+      "견갑골 돌출(좌)",
+      "견갑골 돌출(우)",
+      "어깨 전방 이동(mm)",
       "자세 피드백",
     ];
 
@@ -121,6 +131,14 @@ const PostureData = () => {
           record.shoulderSlope,
           record.headForward,
           record.shoulderHeightDiff,
+          record.cervicalLordosis || 0,
+          record.forwardHeadDistance || 0,
+          record.headTilt || 0,
+          record.headRotation || 0,
+          record.leftShoulderHeightDiff || 0,
+          record.leftScapularWinging ? "예" : "아니오",
+          record.rightScapularWinging ? "예" : "아니오",
+          record.shoulderForwardMovement || 0,
           feedback,
         ];
       });
@@ -147,26 +165,81 @@ const PostureData = () => {
     URL.revokeObjectURL(url);
   }, [filteredHistory, getScoreStatus, formatDate]);
 
-  // 엑셀 형식으로 내보내기
-  const exportExcel = useCallback(() => {
-    // 워크북 생성
-    const wb = XLSX.utils.book_new();
+  // PDF 리포트 생성
+  const exportPDF = useCallback(() => {
+    // PDF 문서 생성 (가로 방향)
+    const doc = new jsPDF("landscape", "mm", "a4");
 
-    // 데이터 시트 생성
+    // 제목 추가
+    doc.setFontSize(20);
+    doc.text("자세 데이터 분석 리포트", 140, 20, { align: "center" });
+
+    // 생성일 추가
+    doc.setFontSize(12);
+    doc.text(`생성일: ${new Date().toLocaleString("ko-KR")}`, 20, 35);
+    doc.text(`총 기록 수: ${filteredHistory.length}개`, 20, 45);
+
+    // 통계 정보 추가
+    doc.setFontSize(14);
+    doc.text("통계 요약", 20, 60);
+    doc.setFontSize(10);
+    doc.text(`평균 점수: ${stats?.avgScore || 0}점`, 20, 70);
+    doc.text(`최고 점수: ${stats?.maxScore || 0}점`, 20, 80);
+    doc.text(`최저 점수: ${stats?.minScore || 0}점`, 20, 90);
+    doc.text(`개선도: ${stats?.improvement || 0}점`, 20, 100);
+    doc.text(`일관성: ${stats?.consistency || 0}%`, 20, 110);
+
+    // 자세 분포 정보
+    doc.text(`완벽한 자세: ${stats?.excellentCount || 0}회`, 80, 70);
+    doc.text(`좋은 자세: ${stats?.goodPostureCount || 0}회`, 80, 80);
+    doc.text(`보통 자세: ${stats?.normalPostureCount || 0}회`, 80, 90);
+    doc.text(`나쁜 자세: ${stats?.poorPostureCount || 0}회`, 80, 100);
+
+    // 측정 지표 정보
+    doc.setFontSize(14);
+    doc.text("측정 지표 (총 10개)", 20, 125);
+    doc.setFontSize(8);
+    doc.text(
+      "목 각도: -45°~45° | 어깨 기울기: -10°~10° | 머리 전방 돌출도: ≤15%",
+      20,
+      135
+    );
+    doc.text(
+      "어깨 높이 차이: ≤8% | 목 전만각: -30°~30° | 머리 전방 이동: ≤100mm",
+      20,
+      145
+    );
+    doc.text(
+      "머리 좌우 기울기: -15°~15° | 머리 좌우 회전: ≤15° | 어깨 높이 차이(mm): ≤40mm",
+      20,
+      155
+    );
+    doc.text("견갑골 돌출: 없음 | 어깨 전방 이동: ≤150mm", 20, 165);
+
+    // 데이터 테이블 생성
     const headers = [
       "날짜/시간",
       "점수",
       "상태",
-      "목 각도(도)",
-      "어깨 기울기(도)",
-      "머리 전방 돌출도(%)",
-      "어깨 높이 차이(%)",
-      "자세 피드백",
+      "목각도",
+      "어깨기울기",
+      "머리전방돌출",
+      "어깨높이차이",
+      "목전만각",
+      "머리전방이동",
+      "머리좌우기울기",
+      "머리좌우회전",
+      "어깨높이차이(mm)",
+      "견갑골돌출(좌)",
+      "견갑골돌출(우)",
+      "어깨전방이동",
+      "자세피드백",
     ];
 
-    const excelData = filteredHistory
+    const tableData = filteredHistory
       .slice()
       .reverse()
+      .slice(0, 20) // 최근 20개만 표시 (PDF 공간 제약)
       .map((record) => {
         const status = getScoreStatus(record.score);
         const feedback = record.issues ? record.issues.join("; ") : "";
@@ -175,84 +248,72 @@ const PostureData = () => {
           formatDate(record.timestamp),
           record.score,
           status.text,
-          parseFloat(record.neckAngle),
-          parseFloat(record.shoulderSlope),
-          parseFloat(record.headForward),
-          parseFloat(record.shoulderHeightDiff),
-          feedback,
+          record.neckAngle,
+          record.shoulderSlope,
+          record.headForward,
+          record.shoulderHeightDiff,
+          record.cervicalLordosis || 0,
+          record.forwardHeadDistance || 0,
+          record.headTilt || 0,
+          record.headRotation || 0,
+          record.leftShoulderHeightDiff || 0,
+          record.leftScapularWinging ? "예" : "아니오",
+          record.rightScapularWinging ? "예" : "아니오",
+          record.shoulderForwardMovement || 0,
+          feedback.length > 50 ? feedback.substring(0, 50) + "..." : feedback,
         ];
       });
 
-    // 헤더와 데이터 결합
-    const worksheetData = [headers, ...excelData];
-
-    // 워크시트 생성
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-
-    // 열 너비 설정
-    const colWidths = [
-      { wch: 20 }, // 날짜/시간
-      { wch: 8 }, // 점수
-      { wch: 10 }, // 상태
-      { wch: 12 }, // 목 각도
-      { wch: 12 }, // 어깨 기울기
-      { wch: 15 }, // 머리 전방 돌출도
-      { wch: 12 }, // 어깨 높이 차이
-      { wch: 30 }, // 자세 피드백
-    ];
-    ws["!cols"] = colWidths;
-
-    // 점수에 따른 셀 스타일 설정
-    excelData.forEach((row, index) => {
-      const score = row[1];
-      const scoreCell = XLSX.utils.encode_cell({ r: index + 1, c: 1 });
-
-      if (score >= 90) {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "C6EFCE" } } }; // 연한 초록 (완벽한 자세)
-      } else if (score >= 60) {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "BBDEFB" } } }; // 연한 파랑 (좋은 자세)
-      } else if (score >= 50) {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFE0B2" } } }; // 연한 주황 (보통 자세)
-      } else {
-        ws[scoreCell].s = { fill: { fgColor: { rgb: "FFCDD2" } } }; // 연한 빨강 (나쁜 자세)
-      }
+    // 테이블 생성
+    autoTable(doc, {
+      head: [headers],
+      body: tableData,
+      startY: 180,
+      theme: "grid",
+      styles: {
+        fontSize: 6,
+        cellPadding: 1,
+        overflow: "linebreak",
+        halign: "center",
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      columnStyles: {
+        0: { cellWidth: 25 }, // 날짜/시간
+        1: { cellWidth: 8 }, // 점수
+        2: { cellWidth: 12 }, // 상태
+        3: { cellWidth: 10 }, // 목각도
+        4: { cellWidth: 10 }, // 어깨기울기
+        5: { cellWidth: 12 }, // 머리전방돌출
+        6: { cellWidth: 10 }, // 어깨높이차이
+        7: { cellWidth: 10 }, // 목전만각
+        8: { cellWidth: 12 }, // 머리전방이동
+        9: { cellWidth: 12 }, // 머리좌우기울기
+        10: { cellWidth: 12 }, // 머리좌우회전
+        11: { cellWidth: 12 }, // 어깨높이차이(mm)
+        12: { cellWidth: 10 }, // 견갑골돌출(좌)
+        13: { cellWidth: 10 }, // 견갑골돌출(우)
+        14: { cellWidth: 12 }, // 어깨전방이동
+        15: { cellWidth: 25 }, // 자세피드백
+      },
     });
 
-    // 통계 시트 생성
-    const statsData = [
-      ["자세 데이터 통계 리포트"],
-      [""],
-      ["생성일", new Date().toLocaleString("ko-KR")],
-      ["총 기록 수", filteredHistory.length],
-      ["평균 점수", stats?.avgScore || 0],
-      ["좋은 자세 횟수", stats?.goodPostureCount || 0],
-      ["나쁜 자세 횟수", stats?.poorPostureCount || 0],
-      ["완벽 자세 횟수", stats?.excellentCount || 0],
-      ["보통 자세 횟수", stats?.normalPostureCount || 0],
-      ["개선도", stats?.improvement || 0],
-      ["일관성", stats?.consistency || 0],
-      ["최고 점수", stats?.maxScore || 0],
-      ["최저 점수", stats?.minScore || 0],
-      [""],
-      ["점수 기준"],
-      ["90점 이상", "완벽한 자세"],
-      ["60-89점", "좋은 자세"],
-      ["50-59점", "보통 자세"],
-      ["50점 미만", "나쁜 자세"],
-    ];
+    // 페이지 번호 추가
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.text(`페이지 ${i} / ${pageCount}`, 140, 200, { align: "center" });
+    }
 
-    const statsWs = XLSX.utils.aoa_to_sheet(statsData);
-    statsWs["!cols"] = [{ wch: 20 }, { wch: 15 }];
-
-    // 워크북에 시트 추가
-    XLSX.utils.book_append_sheet(wb, ws, "자세 데이터");
-    XLSX.utils.book_append_sheet(wb, statsWs, "통계 요약");
-
-    // 엑셀 파일 다운로드
-    XLSX.writeFile(
-      wb,
-      `자세데이터_리포트_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
+    // PDF 파일 다운로드
+    doc.save(`자세데이터_리포트_${new Date().toISOString().split("T")[0]}.pdf`);
   }, [filteredHistory, getScoreStatus, formatDate, stats]);
 
   return (
@@ -261,9 +322,7 @@ const PostureData = () => {
         <h1>자세 데이터 분석</h1>
         <div>
           <ExportButton onClick={exportData}>CSV 내보내기</ExportButton>
-          <ExcelExportButton onClick={exportExcel}>
-            엑셀 리포트
-          </ExcelExportButton>
+          <ExcelExportButton onClick={exportPDF}>PDF 리포트</ExcelExportButton>
           <ClearButton onClick={clearData}>데이터 초기화</ClearButton>
         </div>
       </Header>
@@ -388,22 +447,31 @@ const PostureData = () => {
               <h3>자세 기록 히스토리</h3>
               <ToggleButton
                 onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-                expanded={isHistoryExpanded}
+                expanded={isHistoryExpanded.toString()}
               >
                 {isHistoryExpanded ? "▼" : "▶"}
               </ToggleButton>
             </HistoryHeader>
-            {/* 기간 선택 달력: 제목 바로 아래에 위치 */}
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onChange={({ startDate, endDate }) => {
-                setStartDate(startDate);
-                setEndDate(endDate);
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 8,
               }}
-              label={null}
-              style={{ marginBottom: 8 }}
-            />
+            >
+              <CustomDatePicker
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="시작일 선택"
+              />
+              <span>~</span>
+              <CustomDatePicker
+                value={endDate}
+                onChange={setEndDate}
+                placeholder="종료일 선택"
+              />
+            </div>
             {isHistoryExpanded && (
               <PostureHistoryTable
                 filteredHistory={filteredByDate}
