@@ -30,6 +30,7 @@ import useChartData from "../hooks/useChartData.jsx";
 import usePagination from "../hooks/usePagination.jsx";
 import useRecharts from "../hooks/useRecharts.jsx";
 import CustomDatePicker from "../components/common/CustomDatePicker";
+import { trackDataExport } from "../utils/analytics";
 
 const PostureData = () => {
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
@@ -163,7 +164,11 @@ const PostureData = () => {
     link.download = `자세데이터_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [filteredHistory, getScoreStatus, formatDate]);
+    trackDataExport("csv", {
+      recordCount: filteredHistory.length,
+      dateRange: `${startDate} ~ ${endDate}`,
+    });
+  }, [filteredHistory, getScoreStatus, formatDate, startDate, endDate]);
 
   // PDF 리포트 생성
   const exportPDF = useCallback(() => {
@@ -314,7 +319,11 @@ const PostureData = () => {
 
     // PDF 파일 다운로드
     doc.save(`자세데이터_리포트_${new Date().toISOString().split("T")[0]}.pdf`);
-  }, [filteredHistory, getScoreStatus, formatDate, stats]);
+    trackDataExport("pdf", {
+      recordCount: filteredHistory.length,
+      dateRange: `${startDate} ~ ${endDate}`,
+    });
+  }, [filteredHistory, getScoreStatus, formatDate, stats, startDate, endDate]);
 
   return (
     <DataContainer>

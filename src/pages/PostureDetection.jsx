@@ -31,6 +31,7 @@ import {
   NotificationBanner,
   NotificationCloseButton,
 } from "../styles/PostureDetection.styles";
+import { trackPostureAnalysis, trackError } from "../utils/analytics";
 
 const PostureDetection = () => {
   const canvasRef = useRef(null);
@@ -115,6 +116,9 @@ const PostureDetection = () => {
       await initializePose(onPoseResults);
       setIsDetecting(true);
       startWebcam();
+      trackPostureAnalysis("detection_started", {
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       console.error("자세 감지 시작 오류:", error);
       setPostureStatus("초기화 오류");
@@ -127,6 +131,9 @@ const PostureDetection = () => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
+    trackPostureAnalysis("detection_stopped", {
+      timestamp: new Date().toISOString(),
+    });
   }, [stopWebcam]);
 
   const processFrameLoop = useCallback(async () => {
@@ -187,6 +194,7 @@ const PostureDetection = () => {
             onUserMediaError={(error) => {
               console.error("웹캠 오류:", error);
               setIsDetecting(false);
+              trackError(error, { context: "webcam_error" });
             }}
           />
         )}

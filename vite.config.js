@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+
   build: {
     chunkSizeWarningLimit: 1000, // 청크 크기 경고 한계를 1MB로 증가
     rollupOptions: {

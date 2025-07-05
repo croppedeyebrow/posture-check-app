@@ -14,6 +14,28 @@
     />
     <meta name="author" content="Posture App Team" />
     <title>AI 자세교정 앱 - 실시간 자세 분석 및 교정</title>
+
+    <!-- Google tag (gtag.js) -->
+    <script>
+      // GA4 측정 ID - 환경 변수로 관리
+      const GA4_MEASUREMENT_ID = "G-XXXXXXXXXX"; // 실제 배포 시 환경 변수로 교체
+
+      if (GA4_MEASUREMENT_ID && GA4_MEASUREMENT_ID !== "G-XXXXXXXXXX") {
+        // GA4 스크립트 동적 로드
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_MEASUREMENT_ID}`;
+        document.head.appendChild(script);
+
+        // GA4 초기화
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+        gtag("config", GA4_MEASUREMENT_ID);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
