@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   HistoryTable,
   TableHeader,
@@ -15,20 +16,19 @@ import {
 } from "../../styles/PostureData.styles";
 
 const PostureHistoryTable = ({
-  filteredHistory,
+  data,
   currentPage,
   totalPages,
-  startIndex,
-  endIndex,
-  currentData,
-  handlePageChange,
+  onPageChange,
   getScoreStatus,
   formatDate,
 }) => {
-  if (filteredHistory.length === 0) {
+  const { t } = useTranslation();
+
+  if (data.length === 0) {
     return (
       <EmptyState>
-        <p>선택한 기간에 자세 데이터가 없습니다.</p>
+        <p>{t("data.export.noData")}</p>
       </EmptyState>
     );
   }
@@ -40,35 +40,35 @@ const PostureHistoryTable = ({
           <thead>
             <TableRow>
               <TableHeader style={{ minWidth: "80px", whiteSpace: "nowrap" }}>
-                날짜/시간
+                {t("data.export.dateTime")}
               </TableHeader>
               <TableHeader style={{ minWidth: "60px", whiteSpace: "nowrap" }}>
-                점수
+                {t("detection.metrics.score")}
               </TableHeader>
               <TableHeader style={{ minWidth: "60px", whiteSpace: "nowrap" }}>
-                상태
+                {t("data.export.status")}
               </TableHeader>
-              <TableHeader>머리 전방 돌출</TableHeader>
+              <TableHeader>{t("detection.metrics.headForward")}</TableHeader>
               <TableHeader style={{ minWidth: "90px" }}>
-                <HeaderMultiline>
-                  머리 좌우<span>기울기</span>
-                </HeaderMultiline>
+                <HeaderMultiline>{t("data.export.headTilt")}</HeaderMultiline>
               </TableHeader>
               <TableHeader style={{ minWidth: "90px" }}>
                 <HeaderMultiline>
-                  머리 좌우<span>회전</span>
+                  {t("data.export.headRotation")}
                 </HeaderMultiline>
               </TableHeader>
-              <TableHeader>목 각도</TableHeader>
-              <TableHeader style={{ minWidth: "90px" }}>목 전만각</TableHeader>
-              <TableHeader>어깨 기울기</TableHeader>
+              <TableHeader>{t("detection.metrics.neckAngle")}</TableHeader>
               <TableHeader style={{ minWidth: "90px" }}>
-                어깨 전방 이동
+                {t("data.export.cervicalLordosis")}
+              </TableHeader>
+              <TableHeader>{t("detection.metrics.shoulderSlope")}</TableHeader>
+              <TableHeader style={{ minWidth: "90px" }}>
+                {t("data.export.shoulderForwardMovement")}
               </TableHeader>
             </TableRow>
           </thead>
           <tbody>
-            {currentData
+            {data
               .slice()
               .reverse()
               .map((record, index) => {
@@ -77,7 +77,8 @@ const PostureHistoryTable = ({
                   <TableRow key={index}>
                     <TableCell>{formatDate(record.timestamp)}</TableCell>
                     <TableCell style={{ whiteSpace: "nowrap" }}>
-                      {record.score}점
+                      {record.score}
+                      {t("data.export.points")}
                     </TableCell>
                     <TableCell
                       style={{ whiteSpace: "nowrap" }}
@@ -103,15 +104,16 @@ const PostureHistoryTable = ({
       {totalPages > 1 && (
         <PaginationContainer>
           <PaginationInfo>
-            {startIndex + 1}-{Math.min(endIndex, filteredHistory.length)} /{" "}
-            {filteredHistory.length}개
+            {(currentPage - 1) * 20 + 1}-
+            {Math.min(currentPage * 20, data.length)} / {data.length}
+            {t("data.export.records")}
           </PaginationInfo>
           <PaginationButtons>
             <PaginationButton
-              onClick={() => handlePageChange(currentPage - 1)}
+              onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
-              이전
+              {t("pagination.previous")}
             </PaginationButton>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -130,8 +132,8 @@ const PostureHistoryTable = ({
                     <React.Fragment key={`ellipsis-${page}`}>
                       <PaginationEllipsis>...</PaginationEllipsis>
                       <PaginationButton
-                        onClick={() => handlePageChange(page)}
-                        active={currentPage === page}
+                        onClick={() => onPageChange(page)}
+                        isActive={currentPage === page}
                       >
                         {page}
                       </PaginationButton>
@@ -141,8 +143,8 @@ const PostureHistoryTable = ({
                 return (
                   <PaginationButton
                     key={page}
-                    onClick={() => handlePageChange(page)}
-                    active={currentPage === page}
+                    onClick={() => onPageChange(page)}
+                    isActive={currentPage === page}
                   >
                     {page}
                   </PaginationButton>
@@ -150,10 +152,10 @@ const PostureHistoryTable = ({
               })}
 
             <PaginationButton
-              onClick={() => handlePageChange(currentPage + 1)}
+              onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
-              다음
+              {t("pagination.next")}
             </PaginationButton>
           </PaginationButtons>
         </PaginationContainer>

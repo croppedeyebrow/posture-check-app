@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import WebcamController from "./WebcamController";
 import {
   HomeContainer,
@@ -10,25 +11,22 @@ import {
 } from "../styles/Home.styles";
 
 const Home = () => {
+  const { t } = useTranslation();
+
   return (
     <HomeContainer>
-      <Title>자세교정 앱에 오신 것을 환영합니다</Title>
-      <Description>
-        웹캠을 통해 실시간으로 자세를 분석하고 교정할 수 있습니다. 시작하기 전에
-        웹캠 접근 권한을 허용해주세요.
-      </Description>
+      <Title>{t("home.title")}</Title>
+      <Description>{t("home.description")}</Description>
 
       <Section>
-        <h2>웹캠 테스트</h2>
-        <p>
-          자세 감지를 시작하기 전에 웹캠이 정상적으로 작동하는지 확인해보세요.
-        </p>
+        <h2>{t("home.features.title")}</h2>
+        <p>{t("home.features.realtime")}</p>
         <WebcamController />
       </Section>
 
       <ButtonContainer>
-        <StyledLink to="/detection">자세 감지 시작하기</StyledLink>
-        <StyledLink to="/data">자세 데이터 분석</StyledLink>
+        <StyledLink to="/detection">{t("home.startButton")}</StyledLink>
+        <StyledLink to="/data">{t("nav.data")}</StyledLink>
       </ButtonContainer>
     </HomeContainer>
   );

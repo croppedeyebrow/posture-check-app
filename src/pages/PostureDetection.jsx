@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
 // 커스텀 훅들 import
 import useMediaPipe from "../hooks/useMediaPipe.jsx";
@@ -34,9 +35,12 @@ import {
 import { trackPostureAnalysis, trackError } from "../utils/analytics";
 
 const PostureDetection = () => {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [postureStatus, setPostureStatus] = useState("감지 대기 중");
+  const [postureStatus, setPostureStatus] = useState(
+    t("detection.status.waiting")
+  );
   const [postureData, setPostureData] = useState(null);
   const [notification, setNotification] = useState(null);
 
@@ -121,9 +125,9 @@ const PostureDetection = () => {
       });
     } catch (error) {
       console.error("자세 감지 시작 오류:", error);
-      setPostureStatus("초기화 오류");
+      setPostureStatus(t("detection.status.error"));
     }
-  }, [initializePose, onPoseResults, startWebcam]);
+  }, [initializePose, onPoseResults, startWebcam, t]);
 
   const stopDetection = useCallback(() => {
     setIsDetecting(false);
@@ -173,13 +177,17 @@ const PostureDetection = () => {
         </NotificationBanner>
       )}
 
-      <h1>자세 감지</h1>
+      <h1>{t("detection.title")}</h1>
 
       <ControlsContainer>
         {!isDetecting ? (
-          <StartButton onClick={startDetection}>자세 감지 시작</StartButton>
+          <StartButton onClick={startDetection}>
+            {t("detection.startButton")}
+          </StartButton>
         ) : (
-          <StopButton onClick={stopDetection}>자세 감지 중지</StopButton>
+          <StopButton onClick={stopDetection}>
+            {t("detection.stopButton")}
+          </StopButton>
         )}
       </ControlsContainer>
 
@@ -203,35 +211,38 @@ const PostureDetection = () => {
 
       <StatusText
         isGood={
-          postureStatus === "완벽한 자세" || postureStatus === "좋은 자세"
+          postureStatus === t("detection.posture.perfect") ||
+          postureStatus === t("detection.posture.good")
         }
       >
-        {isDetecting ? `자세 상태: ${postureStatus}` : "자세 감지 준비 중..."}
+        {isDetecting
+          ? `${t("detection.status.detecting")}: ${postureStatus}`
+          : t("detection.status.ready")}
       </StatusText>
 
       {postureData && (
         <PostureInfo>
-          <h3>자세 분석 결과</h3>
+          <h3>{t("detection.feedback.analysis")}</h3>
 
           <ScoreContainer>
             <ScoreCircle score={postureData.score}>
               {postureData.score}%
             </ScoreCircle>
             <ScoreInfo>
-              <ScoreLabel>자세 점수</ScoreLabel>
+              <ScoreLabel>{t("detection.metrics.score")}</ScoreLabel>
               <ScoreValue>{postureData.score}점</ScoreValue>
             </ScoreInfo>
           </ScoreContainer>
 
-          <h4>자세 피드백</h4>
+          <h4>{t("detection.feedback.title")}</h4>
           <IssuesList>
             {postureData.issues.map((issue, index) => (
               <IssueItem
                 key={index}
                 isGood={
-                  issue.problem.includes("완벽한") ||
-                  issue.problem.includes("좋은") ||
-                  issue.problem.includes("괜찮은")
+                  issue.problem.includes(t("detection.posture.perfect")) ||
+                  issue.problem.includes(t("detection.posture.good")) ||
+                  issue.problem.includes(t("detection.posture.normal"))
                 }
               >
                 <div>
@@ -246,26 +257,28 @@ const PostureDetection = () => {
             <MetricCard
               isGood={Math.abs(parseFloat(postureData.neckAngle)) <= 20}
             >
-              <MetricLabel>목 각도</MetricLabel>
+              <MetricLabel>{t("detection.metrics.neckAngle")}</MetricLabel>
               <MetricValue>{postureData.neckAngle}°</MetricValue>
             </MetricCard>
 
             <MetricCard
               isGood={Math.abs(parseFloat(postureData.shoulderSlope)) <= 10}
             >
-              <MetricLabel>어깨 기울기</MetricLabel>
+              <MetricLabel>{t("detection.metrics.shoulderSlope")}</MetricLabel>
               <MetricValue>{postureData.shoulderSlope}°</MetricValue>
             </MetricCard>
 
             <MetricCard isGood={parseFloat(postureData.headForward) <= 10}>
-              <MetricLabel>머리 전방 돌출도</MetricLabel>
+              <MetricLabel>{t("detection.metrics.headForward")}</MetricLabel>
               <MetricValue>{postureData.headForward}%</MetricValue>
             </MetricCard>
 
             <MetricCard
               isGood={parseFloat(postureData.shoulderHeightDiff) <= 5}
             >
-              <MetricLabel>어깨 높이 차이</MetricLabel>
+              <MetricLabel>
+                {t("detection.metrics.shoulderHeightDiff")}
+              </MetricLabel>
               <MetricValue>{postureData.shoulderHeightDiff}%</MetricValue>
             </MetricCard>
           </MetricsGrid>

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -33,10 +34,11 @@ import CustomDatePicker from "../components/common/CustomDatePicker";
 import { trackDataExport } from "../utils/analytics";
 
 const PostureData = () => {
+  const { t } = useTranslation();
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   // 날짜 필터 상태
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [startDate] = useState(null);
+  const [endDate] = useState(null);
 
   // 커스텀 훅들 사용
   const { filteredHistory, stats, timeFilter, applyTimeFilter, clearData } =
@@ -45,24 +47,20 @@ const PostureData = () => {
   const { prepareChartData, preparePieChartData, prepareMetricsChartData } =
     useChartData();
 
-  const {
-    currentPage,
-    totalPages,
-    startIndex,
-    endIndex,
-    currentData,
-    handlePageChange,
-    resetPage,
-  } = usePagination(filteredHistory, 20);
+  const { currentPage, totalPages, currentData, handlePageChange, resetPage } =
+    usePagination(filteredHistory, 20);
 
   const { rechartsLoaded, rechartsComponents } = useRecharts();
 
   // 점수에 따른 상태 반환
   const getScoreStatus = (score) => {
-    if (score >= 90) return { text: "완벽한 자세", color: "excellent" };
-    if (score >= 60) return { text: "좋은 자세", color: "good" };
-    if (score >= 50) return { text: "보통 자세", color: "average" };
-    return { text: "나쁜 자세", color: "poor" };
+    if (score >= 90)
+      return { text: t("detection.posture.perfect"), color: "excellent" };
+    if (score >= 60)
+      return { text: t("detection.posture.good"), color: "good" };
+    if (score >= 50)
+      return { text: t("detection.posture.normal"), color: "average" };
+    return { text: t("detection.posture.bad"), color: "poor" };
   };
 
   // 날짜 포맷팅
@@ -98,22 +96,22 @@ const PostureData = () => {
   const exportData = useCallback(() => {
     // CSV 헤더 생성 (최신 지표 포함)
     const headers = [
-      "날짜/시간",
-      "점수",
-      "상태",
-      "목 각도(도)",
-      "어깨 기울기(도)",
-      "머리 전방 돌출도(%)",
-      "어깨 높이 차이(%)",
-      "목 전만각(도)",
-      "머리 전방 이동 거리(mm)",
-      "머리 좌우 기울기(도)",
-      "머리 좌우 회전(도)",
-      "어깨 높이 차이(mm)",
-      "견갑골 돌출(좌)",
-      "견갑골 돌출(우)",
-      "어깨 전방 이동(mm)",
-      "자세 피드백",
+      t("data.export.dateTime"),
+      t("detection.metrics.score"),
+      t("data.export.status"),
+      t("detection.metrics.neckAngle"),
+      t("detection.metrics.shoulderSlope"),
+      t("detection.metrics.headForward"),
+      t("detection.metrics.shoulderHeightDiff"),
+      t("data.export.cervicalLordosis"),
+      t("data.export.forwardHeadDistance"),
+      t("data.export.headTilt"),
+      t("data.export.headRotation"),
+      t("data.export.shoulderHeightDiffMm"),
+      t("data.export.scapularWingingLeft"),
+      t("data.export.scapularWingingRight"),
+      t("data.export.shoulderForwardMovement"),
+      t("data.export.feedback"),
     ];
 
     // CSV 데이터 생성
@@ -161,14 +159,16 @@ const PostureData = () => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `자세데이터_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `${t("data.export.postureData")}_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     link.click();
     URL.revokeObjectURL(url);
     trackDataExport("csv", {
       recordCount: filteredHistory.length,
       dateRange: `${startDate} ~ ${endDate}`,
     });
-  }, [filteredHistory, getScoreStatus, formatDate, startDate, endDate]);
+  }, [filteredHistory, getScoreStatus, formatDate, startDate, endDate, t]);
 
   // PDF 리포트 생성
   const exportPDF = useCallback(() => {
@@ -177,68 +177,146 @@ const PostureData = () => {
 
     // 제목 추가
     doc.setFontSize(20);
-    doc.text("자세 데이터 분석 리포트", 140, 20, { align: "center" });
+    doc.text(t("data.export.postureAnalysisReport"), 140, 20, {
+      align: "center",
+    });
 
     // 생성일 추가
     doc.setFontSize(12);
-    doc.text(`생성일: ${new Date().toLocaleString("ko-KR")}`, 20, 35);
-    doc.text(`총 기록 수: ${filteredHistory.length}개`, 20, 45);
+    doc.text(
+      `${t("data.export.generatedDate")}: ${new Date().toLocaleString(
+        "ko-KR"
+      )}`,
+      20,
+      35
+    );
+    doc.text(
+      `${t("data.stats.totalRecords")}: ${filteredHistory.length}${t(
+        "data.export.records"
+      )}`,
+      20,
+      45
+    );
 
     // 통계 정보 추가
     doc.setFontSize(14);
-    doc.text("통계 요약", 20, 60);
+    doc.text(t("data.stats.title"), 20, 60);
     doc.setFontSize(10);
-    doc.text(`평균 점수: ${stats?.avgScore || 0}점`, 20, 70);
-    doc.text(`최고 점수: ${stats?.maxScore || 0}점`, 20, 80);
-    doc.text(`최저 점수: ${stats?.minScore || 0}점`, 20, 90);
-    doc.text(`개선도: ${stats?.improvement || 0}점`, 20, 100);
-    doc.text(`일관성: ${stats?.consistency || 0}%`, 20, 110);
+    doc.text(
+      `${t("data.stats.averageScore")}: ${stats?.avgScore || 0}${t(
+        "data.export.points"
+      )}`,
+      20,
+      70
+    );
+    doc.text(
+      `${t("data.stats.bestScore")}: ${stats?.maxScore || 0}${t(
+        "data.export.points"
+      )}`,
+      20,
+      80
+    );
+    doc.text(
+      `${t("data.export.minScore")}: ${stats?.minScore || 0}${t(
+        "data.export.points"
+      )}`,
+      20,
+      90
+    );
+    doc.text(
+      `${t("data.stats.improvement")}: ${stats?.improvement || 0}${t(
+        "data.export.points"
+      )}`,
+      20,
+      100
+    );
+    doc.text(
+      `${t("data.export.consistency")}: ${stats?.consistency || 0}%`,
+      20,
+      110
+    );
 
     // 자세 분포 정보
-    doc.text(`완벽한 자세: ${stats?.excellentCount || 0}회`, 80, 70);
-    doc.text(`좋은 자세: ${stats?.goodPostureCount || 0}회`, 80, 80);
-    doc.text(`보통 자세: ${stats?.normalPostureCount || 0}회`, 80, 90);
-    doc.text(`나쁜 자세: ${stats?.poorPostureCount || 0}회`, 80, 100);
+    doc.text(
+      `${t("detection.posture.perfect")}: ${stats?.excellentCount || 0}${t(
+        "data.export.times"
+      )}`,
+      80,
+      70
+    );
+    doc.text(
+      `${t("detection.posture.good")}: ${stats?.goodPostureCount || 0}${t(
+        "data.export.times"
+      )}`,
+      80,
+      80
+    );
+    doc.text(
+      `${t("detection.posture.normal")}: ${stats?.normalPostureCount || 0}${t(
+        "data.export.times"
+      )}`,
+      80,
+      90
+    );
+    doc.text(
+      `${t("detection.posture.bad")}: ${stats?.poorPostureCount || 0}${t(
+        "data.export.times"
+      )}`,
+      80,
+      100
+    );
 
     // 측정 지표 정보
     doc.setFontSize(14);
-    doc.text("측정 지표 (총 10개)", 20, 125);
+    doc.text(t("data.metrics.title"), 20, 125);
     doc.setFontSize(8);
     doc.text(
-      "목 각도: -45°~45° | 어깨 기울기: -10°~10° | 머리 전방 돌출도: ≤15%",
+      `${t("detection.metrics.neckAngle")}: -45°~45° | ${t(
+        "detection.metrics.shoulderSlope"
+      )}: -10°~10° | ${t("detection.metrics.headForward")}: ≤15%`,
       20,
       135
     );
     doc.text(
-      "어깨 높이 차이: ≤8% | 목 전만각: -30°~30° | 머리 전방 이동: ≤100mm",
+      `${t("detection.metrics.shoulderHeightDiff")}: ≤8% | ${t(
+        "data.export.cervicalLordosis"
+      )}: -30°~30° | ${t("data.export.forwardHeadDistance")}: ≤100mm`,
       20,
       145
     );
     doc.text(
-      "머리 좌우 기울기: -15°~15° | 머리 좌우 회전: ≤15° | 어깨 높이 차이(mm): ≤40mm",
+      `${t("data.export.headTilt")}: -15°~15° | ${t(
+        "data.export.headRotation"
+      )}: ≤15° | ${t("data.export.shoulderHeightDiffMm")}: ≤40mm`,
       20,
       155
     );
-    doc.text("견갑골 돌출: 없음 | 어깨 전방 이동: ≤150mm", 20, 165);
+    doc.text(
+      `${t("data.export.scapularWinging")}: ${t("data.export.none")} | ${t(
+        "data.export.shoulderForwardMovement"
+      )}: ≤150mm`,
+      20,
+      165
+    );
 
     // 데이터 테이블 생성
     const headers = [
-      "날짜/시간",
-      "점수",
-      "상태",
-      "목각도",
-      "어깨기울기",
-      "머리전방돌출",
-      "어깨높이차이",
-      "목전만각",
-      "머리전방이동",
-      "머리좌우기울기",
-      "머리좌우회전",
-      "어깨높이차이(mm)",
-      "견갑골돌출(좌)",
-      "견갑골돌출(우)",
-      "어깨전방이동",
-      "자세피드백",
+      t("data.export.dateTime"),
+      t("detection.metrics.score"),
+      t("data.export.status"),
+      t("detection.metrics.neckAngle"),
+      t("detection.metrics.shoulderSlope"),
+      t("detection.metrics.headForward"),
+      t("detection.metrics.shoulderHeightDiff"),
+      t("data.export.cervicalLordosis"),
+      t("data.export.forwardHeadDistance"),
+      t("data.export.headTilt"),
+      t("data.export.headRotation"),
+      t("data.export.shoulderHeightDiffMm"),
+      t("data.export.scapularWingingLeft"),
+      t("data.export.scapularWingingRight"),
+      t("data.export.shoulderForwardMovement"),
+      t("data.export.feedback"),
     ];
 
     const tableData = filteredHistory
@@ -314,194 +392,182 @@ const PostureData = () => {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.text(`페이지 ${i} / ${pageCount}`, 140, 200, { align: "center" });
+      doc.text(`${t("data.export.page")} ${i} / ${pageCount}`, 140, 200, {
+        align: "center",
+      });
     }
 
     // PDF 파일 다운로드
-    doc.save(`자세데이터_리포트_${new Date().toISOString().split("T")[0]}.pdf`);
+    doc.save(
+      `${t("data.export.postureData")}_${t("data.export.report")}_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`
+    );
     trackDataExport("pdf", {
       recordCount: filteredHistory.length,
       dateRange: `${startDate} ~ ${endDate}`,
     });
-  }, [filteredHistory, getScoreStatus, formatDate, stats, startDate, endDate]);
+  }, [
+    filteredHistory,
+    getScoreStatus,
+    formatDate,
+    stats,
+    startDate,
+    endDate,
+    t,
+  ]);
 
   return (
     <DataContainer>
       <Header>
-        <h1>자세 데이터 분석</h1>
-        <div>
-          <ExportButton onClick={exportData}>CSV 내보내기</ExportButton>
-          <ExcelExportButton onClick={exportPDF}>PDF 리포트</ExcelExportButton>
-          <ClearButton onClick={clearData}>데이터 초기화</ClearButton>
-        </div>
+        <h1>{t("data.title")}</h1>
       </Header>
 
+      {/* 통계 카드 */}
+      {stats ? (
+        <StatsGrid>
+          <StatCard isGood={parseFloat(stats.avgScore) >= 60}>
+            <StatLabel>{t("data.stats.averageScore")}</StatLabel>
+            <StatValue>{stats.avgScore}점</StatValue>
+          </StatCard>
+
+          <StatCard isGood={stats.excellentCount > 0} postureType="excellent">
+            <StatLabel>{t("detection.posture.perfect")}</StatLabel>
+            <StatValue>{stats.excellentCount}회</StatValue>
+          </StatCard>
+
+          <StatCard
+            isGood={stats.goodPostureCount > stats.poorPostureCount}
+            postureType="good"
+          >
+            <StatLabel>{t("detection.posture.good")}</StatLabel>
+            <StatValue>{stats.goodPostureCount}회</StatValue>
+          </StatCard>
+
+          <StatCard isGood={stats.normalPostureCount > 0} postureType="average">
+            <StatLabel>{t("detection.posture.normal")}</StatLabel>
+            <StatValue>{stats.normalPostureCount}회</StatValue>
+          </StatCard>
+
+          <StatCard isGood={stats.poorPostureCount < 5} postureType="poor">
+            <StatLabel>{t("detection.posture.bad")}</StatLabel>
+            <StatValue>{stats.poorPostureCount}회</StatValue>
+          </StatCard>
+
+          <StatCard isGood={parseFloat(stats.improvement) > 0}>
+            <StatLabel>{t("data.stats.improvement")}</StatLabel>
+            <StatValue>{stats.improvement}점</StatValue>
+          </StatCard>
+
+          <StatCard isGood={parseFloat(stats.consistency) >= 50}>
+            <StatLabel>{t("data.export.consistency")}</StatLabel>
+            <StatValue>{stats.consistency}%</StatValue>
+          </StatCard>
+
+          <StatCard isGood={stats.maxScore >= 90}>
+            <StatLabel>{t("data.stats.bestScore")}</StatLabel>
+            <StatValue>{stats.maxScore}점</StatValue>
+          </StatCard>
+        </StatsGrid>
+      ) : (
+        <EmptyState>
+          <h3>{t("data.export.noData")}</h3>
+          <p>{t("data.export.noDataMessage")}</p>
+        </EmptyState>
+      )}
+
+      {/* 필터 컨테이너 */}
       <FilterContainer>
-        <FilterButton
-          active={timeFilter === "all"}
-          onClick={() => handleTimeFilter("all")}
-        >
-          전체
-        </FilterButton>
-        <FilterButton
-          active={timeFilter === "today"}
-          onClick={() => handleTimeFilter("today")}
-        >
-          오늘
-        </FilterButton>
-        <FilterButton
-          active={timeFilter === "week"}
-          onClick={() => handleTimeFilter("week")}
-        >
-          이번 주
-        </FilterButton>
-        <FilterButton
-          active={timeFilter === "month"}
-          onClick={() => handleTimeFilter("month")}
-        >
-          이번 달
-        </FilterButton>
+        <div>
+          <h3>{t("data.filter.title")}</h3>
+          <div>
+            <FilterButton
+              onClick={() => handleTimeFilter("all")}
+              isActive={timeFilter === "all"}
+            >
+              {t("data.filter.all")}
+            </FilterButton>
+            <FilterButton
+              onClick={() => handleTimeFilter("today")}
+              isActive={timeFilter === "today"}
+            >
+              {t("data.filter.today")}
+            </FilterButton>
+            <FilterButton
+              onClick={() => handleTimeFilter("thisWeek")}
+              isActive={timeFilter === "thisWeek"}
+            >
+              {t("data.filter.thisWeek")}
+            </FilterButton>
+            <FilterButton
+              onClick={() => handleTimeFilter("thisMonth")}
+              isActive={timeFilter === "thisMonth"}
+            >
+              {t("data.filter.thisMonth")}
+            </FilterButton>
+          </div>
+        </div>
+
+        {/* 내보내기 버튼들 */}
+        <div>
+          <ExportButton onClick={exportData}>
+            {t("data.export.csv")}
+          </ExportButton>
+          <ExcelExportButton onClick={exportPDF}>
+            {t("data.export.pdf")}
+          </ExcelExportButton>
+          <ClearButton onClick={clearData}>{t("data.clear")}</ClearButton>
+        </div>
       </FilterContainer>
 
-      {stats ? (
-        <>
-          <StatsGrid>
-            <StatCard isGood={parseFloat(stats.avgScore) >= 60}>
-              <StatLabel>평균 점수</StatLabel>
-              <StatValue>{stats.avgScore}점</StatValue>
-            </StatCard>
+      {/* 차트 컨테이너 */}
+      {rechartsLoaded && (
+        <ChartContainer>
+          <ScoreChart
+            data={prepareChartData(filteredHistory)}
+            rechartsComponents={rechartsComponents}
+          />
+          <PosturePieChart
+            data={preparePieChartData(filteredHistory)}
+            rechartsComponents={rechartsComponents}
+          />
+          <MetricsChart
+            data={prepareMetricsChartData(filteredByDate)}
+            rechartsComponents={rechartsComponents}
+          />
+        </ChartContainer>
+      )}
 
-            <StatCard isGood={stats.excellentCount > 0} postureType="excellent">
-              <StatLabel>완벽한 자세</StatLabel>
-              <StatValue>{stats.excellentCount}회</StatValue>
-            </StatCard>
+      {/* 데이터 히스토리 컨테이너 */}
+      <DataHistoryContainer>
+        <HistoryHeader>
+          <h2>{t("data.export.history")}</h2>
+          <ToggleButton
+            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+          >
+            {isHistoryExpanded ? "접기" : "펼치기"}
+          </ToggleButton>
+        </HistoryHeader>
 
-            <StatCard
-              isGood={stats.goodPostureCount > stats.poorPostureCount}
-              postureType="good"
-            >
-              <StatLabel>좋은 자세</StatLabel>
-              <StatValue>{stats.goodPostureCount}회</StatValue>
-            </StatCard>
-
-            <StatCard
-              isGood={stats.normalPostureCount > 0}
-              postureType="average"
-            >
-              <StatLabel>보통 자세</StatLabel>
-              <StatValue>{stats.normalPostureCount}회</StatValue>
-            </StatCard>
-
-            <StatCard isGood={stats.poorPostureCount < 5} postureType="poor">
-              <StatLabel>나쁜 자세</StatLabel>
-              <StatValue>{stats.poorPostureCount}회</StatValue>
-            </StatCard>
-
-            <StatCard isGood={parseFloat(stats.improvement) > 0}>
-              <StatLabel>개선도</StatLabel>
-              <StatValue>{stats.improvement}점</StatValue>
-            </StatCard>
-
-            <StatCard isGood={parseFloat(stats.consistency) >= 50}>
-              <StatLabel>일관성</StatLabel>
-              <StatValue>{stats.consistency}%</StatValue>
-            </StatCard>
-
-            <StatCard isGood={stats.maxScore >= 90}>
-              <StatLabel>최고 점수</StatLabel>
-              <StatValue>{stats.maxScore}점</StatValue>
-            </StatCard>
-          </StatsGrid>
-
-          <ChartContainer>
-            <HistoryHeader>
-              <h3>점수 변화 그래프</h3>
-            </HistoryHeader>
-            {filteredHistory.length > 0 &&
-              rechartsLoaded &&
-              rechartsComponents && (
-                <ScoreChart
-                  data={prepareChartData(filteredHistory)}
-                  rechartsComponents={rechartsComponents}
-                />
-              )}
-
-            <HistoryHeader>
-              <h3>자세 분포 분석</h3>
-            </HistoryHeader>
-            {filteredHistory.length > 0 &&
-              rechartsLoaded &&
-              rechartsComponents && (
-                <PosturePieChart
-                  data={preparePieChartData(filteredHistory)}
-                  rechartsComponents={rechartsComponents}
-                />
-              )}
-
-            <HistoryHeader>
-              <h3>자세 지표 변화</h3>
-            </HistoryHeader>
-            {filteredHistory.length > 0 &&
-              rechartsLoaded &&
-              rechartsComponents && (
-                <MetricsChart
-                  data={prepareMetricsChartData(filteredByDate)}
-                  rechartsComponents={rechartsComponents}
-                />
-              )}
-          </ChartContainer>
-
-          <DataHistoryContainer>
-            <HistoryHeader>
-              <h3>자세 기록 히스토리</h3>
-              <ToggleButton
-                onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-                expanded={isHistoryExpanded.toString()}
-              >
-                {isHistoryExpanded ? "▼" : "▶"}
-              </ToggleButton>
-            </HistoryHeader>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 8,
-              }}
-            >
-              <CustomDatePicker
-                value={startDate}
-                onChange={setStartDate}
-                placeholder="시작일 선택"
-              />
-              <span>~</span>
-              <CustomDatePicker
-                value={endDate}
-                onChange={setEndDate}
-                placeholder="종료일 선택"
-              />
-            </div>
-            {isHistoryExpanded && (
+        {isHistoryExpanded && (
+          <>
+            {filteredByDate.length === 0 ? (
+              <EmptyState>
+                <p>{t("data.export.noData")}</p>
+              </EmptyState>
+            ) : (
               <PostureHistoryTable
-                filteredHistory={filteredByDate}
+                data={currentData}
                 currentPage={currentPage}
                 totalPages={totalPages}
-                startIndex={startIndex}
-                endIndex={endIndex}
-                currentData={currentData}
-                handlePageChange={handlePageChange}
+                onPageChange={handlePageChange}
                 getScoreStatus={getScoreStatus}
                 formatDate={formatDate}
               />
             )}
-          </DataHistoryContainer>
-        </>
-      ) : (
-        <EmptyState>
-          <h3>자세 데이터가 없습니다</h3>
-          <p>자세 감지를 시작하여 데이터를 수집해보세요.</p>
-        </EmptyState>
-      )}
+          </>
+        )}
+      </DataHistoryContainer>
     </DataContainer>
   );
 };
