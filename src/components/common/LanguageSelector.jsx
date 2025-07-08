@@ -2,39 +2,66 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 
-const LanguageContainer = styled.div`
+const FloatingButton = styled.button`
   position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
+  right: 32px;
+  bottom: 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #007bff;
+  color: white;
+  font-size: 0.2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: none;
+  cursor: pointer;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  line-height: 1;
+  &:hover {
+    background: #0056b3;
+  }
+`;
+
+const CenteredSpan = styled.span`
+  display: inline-block;
+  line-height: 1;
+  font-size: 2rem;
+`;
+
+const LanguagePopup = styled.div`
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  padding: 8px 0;
+  z-index: 2100;
 `;
 
 const LanguageButton = styled.button`
   background: ${(props) => (props.isActive ? "#007bff" : "#f8f9fa")};
   color: ${(props) => (props.isActive ? "white" : "#333")};
-  border: 2px solid #007bff;
-  border-radius: 8px;
-  padding: 8px 16px;
-  margin: 0 4px;
+  border: none;
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-
+  transition: background 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border-bottom: ${(props) => (props.isLast ? "none" : "1px solid #eee")};
   &:hover {
-    background: ${(props) => (props.isActive ? "#0056b3" : "#e9ecef")};
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  @media (max-width: 768px) {
-    padding: 6px 12px;
-    font-size: 12px;
-    margin: 0 2px;
+    background: #e9ecef;
   }
 `;
 
@@ -57,48 +84,28 @@ const LanguageSelector = () => {
   };
 
   return (
-    <LanguageContainer>
-      <LanguageButton onClick={() => setIsOpen(!isOpen)} isActive={isOpen}>
-        {currentLanguage.flag} {currentLanguage.name}
-      </LanguageButton>
-
+    <div style={{ position: "fixed", right: 32, bottom: 32, zIndex: 2000 }}>
+      <FloatingButton
+        onClick={() => setIsOpen((v) => !v)}
+        aria-label={t("common.language") + " 선택"}
+      >
+        <CenteredSpan>{currentLanguage.flag}</CenteredSpan>
+      </FloatingButton>
       {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            right: 0,
-            background: "white",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            marginTop: "8px",
-            minWidth: "120px",
-          }}
-        >
-          {languages.map((language) => (
+        <LanguagePopup>
+          {languages.map((language, idx) => (
             <LanguageButton
               key={language.code}
               onClick={() => handleLanguageChange(language.code)}
               isActive={i18n.language === language.code}
-              style={{
-                display: "block",
-                width: "100%",
-                margin: "0",
-                borderRadius: "0",
-                border: "none",
-                borderBottom:
-                  language.code !== "ja" ? "1px solid #eee" : "none",
-                textAlign: "left",
-                padding: "12px 16px",
-              }}
+              isLast={idx === languages.length - 1}
             >
               {language.flag} {language.name}
             </LanguageButton>
           ))}
-        </div>
+        </LanguagePopup>
       )}
-    </LanguageContainer>
+    </div>
   );
 };
 

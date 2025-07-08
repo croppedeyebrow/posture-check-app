@@ -133,7 +133,7 @@ const PostureHistoryTable = ({
                       <PaginationEllipsis>...</PaginationEllipsis>
                       <PaginationButton
                         onClick={() => onPageChange(page)}
-                        isActive={currentPage === page}
+                        $isActive={currentPage === page}
                       >
                         {page}
                       </PaginationButton>
@@ -144,7 +144,7 @@ const PostureHistoryTable = ({
                   <PaginationButton
                     key={page}
                     onClick={() => onPageChange(page)}
-                    isActive={currentPage === page}
+                    $isActive={currentPage === page}
                   >
                     {page}
                   </PaginationButton>

@@ -42,19 +42,19 @@ export const FilterContainer = styled.div`
 export const FilterButton = styled.button`
   padding: 0.5rem 1rem;
   border: 2px solid
-    ${({ theme, active }) =>
-      active ? theme.colors.primary : theme.colors.border};
+    ${({ theme, $isActive }) =>
+      $isActive ? theme.colors.primary : theme.colors.border};
   border-radius: 6px;
-  background: ${({ theme, active }) =>
-    active ? theme.colors.primary : "transparent"};
-  color: ${({ theme, active }) => (active ? "white" : theme.colors.text)};
+  background: ${({ theme, $isActive }) =>
+    $isActive ? theme.colors.primary : "transparent"};
+  color: ${({ theme, $isActive }) => ($isActive ? "white" : theme.colors.text)};
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme, active }) =>
-      active ? theme.colors.primaryDark : theme.colors.background};
+    background: ${({ theme, $isActive }) =>
+      $isActive ? theme.colors.primaryDark : theme.colors.background};
     transform: translateY(-1px);
   }
 `;
@@ -71,12 +71,12 @@ export const StatCard = styled.div`
   padding: 1.5rem;
   border-radius: 12px;
   border-left: 4px solid
-    ${({ theme, isGood, postureType }) => {
-      if (postureType === "excellent") return "#2196F3"; // 완벽한 자세 - blue
-      if (postureType === "good") return "#4CAF50"; // 좋은 자세 - green
-      if (postureType === "average") return "#FF9800"; // 보통 자세 - orange
-      if (postureType === "poor") return "#F44336"; // 나쁜 자세 - red
-      return isGood ? theme.colors.success : theme.colors.error;
+    ${({ theme, $isGood, $postureType }) => {
+      if ($postureType === "excellent") return "#2196F3"; // 완벽한 자세 - blue
+      if ($postureType === "good") return "#4CAF50"; // 좋은 자세 - green
+      if ($postureType === "average") return "#FF9800"; // 보통 자세 - orange
+      if ($postureType === "poor") return "#F44336"; // 나쁜 자세 - red
+      return $isGood ? theme.colors.success : theme.colors.error;
     }};
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease;
@@ -257,15 +257,15 @@ export const PaginationButtons = styled.div`
 export const PaginationButton = styled.button`
   padding: 0.5rem 1rem;
   border: 2px solid
-    ${({ theme, active }) =>
-      active ? theme.colors.primary : theme.colors.border};
+    ${({ theme, $isActive }) =>
+      $isActive ? theme.colors.primary : theme.colors.border};
   border-radius: 6px;
-  background: ${({ theme, active }) =>
-    active ? theme.colors.primary : "transparent"};
-  color: ${({ theme, active, disabled }) =>
+  background: ${({ theme, $isActive }) =>
+    $isActive ? theme.colors.primary : "transparent"};
+  color: ${({ theme, $isActive, disabled }) =>
     disabled
       ? theme.colors.textSecondary
-      : active
+      : $isActive
       ? "white"
       : theme.colors.text};
   font-weight: 600;
@@ -274,8 +274,8 @@ export const PaginationButton = styled.button`
   min-width: 40px;
 
   &:hover:not(:disabled) {
-    background: ${({ theme, active }) =>
-      active ? theme.colors.primaryDark : theme.colors.background};
+    background: ${({ theme, $isActive }) =>
+      $isActive ? theme.colors.primaryDark : theme.colors.background};
     transform: translateY(-1px);
   }
 

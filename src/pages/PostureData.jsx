@@ -37,8 +37,8 @@ const PostureData = () => {
   const { t } = useTranslation();
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   // 날짜 필터 상태
-  const [startDate] = useState(null);
-  const [endDate] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   // 커스텀 훅들 사용
   const { filteredHistory, stats, timeFilter, applyTimeFilter, clearData } =
@@ -421,50 +421,95 @@ const PostureData = () => {
     <DataContainer>
       <Header>
         <h1>{t("data.title")}</h1>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <ExportButton onClick={exportData}>
+            {t("data.export.csv")}
+          </ExportButton>
+          <ExcelExportButton onClick={exportPDF}>
+            {t("data.export.pdf")}
+          </ExcelExportButton>
+          <ClearButton onClick={clearData}>{t("data.clear")}</ClearButton>
+        </div>
       </Header>
+
+      {/* 기간 필터만 남긴 컨테이너 */}
+      <FilterContainer>
+        <div>
+          <h3>{t("data.filter.title")}</h3>
+          <div>
+            <FilterButton
+              onClick={() => handleTimeFilter("all")}
+              $isActive={timeFilter === "all"}
+            >
+              {t("data.filter.all")}
+            </FilterButton>
+            <FilterButton
+              onClick={() => handleTimeFilter("today")}
+              $isActive={timeFilter === "today"}
+            >
+              {t("data.filter.today")}
+            </FilterButton>
+            <FilterButton
+              onClick={() => handleTimeFilter("thisWeek")}
+              $isActive={timeFilter === "thisWeek"}
+            >
+              {t("data.filter.thisWeek")}
+            </FilterButton>
+            <FilterButton
+              onClick={() => handleTimeFilter("thisMonth")}
+              $isActive={timeFilter === "thisMonth"}
+            >
+              {t("data.filter.thisMonth")}
+            </FilterButton>
+          </div>
+        </div>
+      </FilterContainer>
 
       {/* 통계 카드 */}
       {stats ? (
         <StatsGrid>
-          <StatCard isGood={parseFloat(stats.avgScore) >= 60}>
+          <StatCard $isGood={parseFloat(stats.avgScore) >= 60}>
             <StatLabel>{t("data.stats.averageScore")}</StatLabel>
             <StatValue>{stats.avgScore}점</StatValue>
           </StatCard>
 
-          <StatCard isGood={stats.excellentCount > 0} postureType="excellent">
+          <StatCard $isGood={stats.excellentCount > 0} $postureType="excellent">
             <StatLabel>{t("detection.posture.perfect")}</StatLabel>
             <StatValue>{stats.excellentCount}회</StatValue>
           </StatCard>
 
           <StatCard
-            isGood={stats.goodPostureCount > stats.poorPostureCount}
-            postureType="good"
+            $isGood={stats.goodPostureCount > stats.poorPostureCount}
+            $postureType="good"
           >
             <StatLabel>{t("detection.posture.good")}</StatLabel>
             <StatValue>{stats.goodPostureCount}회</StatValue>
           </StatCard>
 
-          <StatCard isGood={stats.normalPostureCount > 0} postureType="average">
+          <StatCard
+            $isGood={stats.normalPostureCount > 0}
+            $postureType="average"
+          >
             <StatLabel>{t("detection.posture.normal")}</StatLabel>
             <StatValue>{stats.normalPostureCount}회</StatValue>
           </StatCard>
 
-          <StatCard isGood={stats.poorPostureCount < 5} postureType="poor">
+          <StatCard $isGood={stats.poorPostureCount < 5} $postureType="poor">
             <StatLabel>{t("detection.posture.bad")}</StatLabel>
             <StatValue>{stats.poorPostureCount}회</StatValue>
           </StatCard>
 
-          <StatCard isGood={parseFloat(stats.improvement) > 0}>
+          <StatCard $isGood={parseFloat(stats.improvement) > 0}>
             <StatLabel>{t("data.stats.improvement")}</StatLabel>
             <StatValue>{stats.improvement}점</StatValue>
           </StatCard>
 
-          <StatCard isGood={parseFloat(stats.consistency) >= 50}>
+          <StatCard $isGood={parseFloat(stats.consistency) >= 50}>
             <StatLabel>{t("data.export.consistency")}</StatLabel>
             <StatValue>{stats.consistency}%</StatValue>
           </StatCard>
 
-          <StatCard isGood={stats.maxScore >= 90}>
+          <StatCard $isGood={stats.maxScore >= 90}>
             <StatLabel>{t("data.stats.bestScore")}</StatLabel>
             <StatValue>{stats.maxScore}점</StatValue>
           </StatCard>
@@ -476,61 +521,34 @@ const PostureData = () => {
         </EmptyState>
       )}
 
-      {/* 필터 컨테이너 */}
-      <FilterContainer>
-        <div>
-          <h3>{t("data.filter.title")}</h3>
-          <div>
-            <FilterButton
-              onClick={() => handleTimeFilter("all")}
-              isActive={timeFilter === "all"}
-            >
-              {t("data.filter.all")}
-            </FilterButton>
-            <FilterButton
-              onClick={() => handleTimeFilter("today")}
-              isActive={timeFilter === "today"}
-            >
-              {t("data.filter.today")}
-            </FilterButton>
-            <FilterButton
-              onClick={() => handleTimeFilter("thisWeek")}
-              isActive={timeFilter === "thisWeek"}
-            >
-              {t("data.filter.thisWeek")}
-            </FilterButton>
-            <FilterButton
-              onClick={() => handleTimeFilter("thisMonth")}
-              isActive={timeFilter === "thisMonth"}
-            >
-              {t("data.filter.thisMonth")}
-            </FilterButton>
-          </div>
-        </div>
-
-        {/* 내보내기 버튼들 */}
-        <div>
-          <ExportButton onClick={exportData}>
-            {t("data.export.csv")}
-          </ExportButton>
-          <ExcelExportButton onClick={exportPDF}>
-            {t("data.export.pdf")}
-          </ExcelExportButton>
-          <ClearButton onClick={clearData}>{t("data.clear")}</ClearButton>
-        </div>
-      </FilterContainer>
-
       {/* 차트 컨테이너 */}
       {rechartsLoaded && (
         <ChartContainer>
+          <h3>{t("data.chart.scoreTrend")}</h3>
           <ScoreChart
             data={prepareChartData(filteredHistory)}
             rechartsComponents={rechartsComponents}
           />
+          <hr
+            style={{
+              margin: "2rem 0",
+              border: 0,
+              borderTop: "1.5px solid #eee",
+            }}
+          />
+          <h3>{t("data.chart.postureDistribution")}</h3>
           <PosturePieChart
             data={preparePieChartData(filteredHistory)}
             rechartsComponents={rechartsComponents}
           />
+          <hr
+            style={{
+              margin: "2rem 0",
+              border: 0,
+              borderTop: "1.5px solid #eee",
+            }}
+          />
+          <h3>{t("data.chart.metrics")}</h3>
           <MetricsChart
             data={prepareMetricsChartData(filteredByDate)}
             rechartsComponents={rechartsComponents}
@@ -542,11 +560,24 @@ const PostureData = () => {
       <DataHistoryContainer>
         <HistoryHeader>
           <h2>{t("data.export.history")}</h2>
-          <ToggleButton
-            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-          >
-            {isHistoryExpanded ? "접기" : "펼치기"}
-          </ToggleButton>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <CustomDatePicker
+              value={startDate}
+              onChange={setStartDate}
+              placeholder="시작일"
+            />
+            <span>~</span>
+            <CustomDatePicker
+              value={endDate}
+              onChange={setEndDate}
+              placeholder="종료일"
+            />
+            <ToggleButton
+              onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+            >
+              {isHistoryExpanded ? "접기" : "펼치기"}
+            </ToggleButton>
+          </div>
         </HistoryHeader>
 
         {isHistoryExpanded && (
