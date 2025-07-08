@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+
 import {
   DataContainer,
   Header,
@@ -31,10 +30,11 @@ import useChartData from "../hooks/useChartData.jsx";
 import usePagination from "../hooks/usePagination.jsx";
 import useRecharts from "../hooks/useRecharts.jsx";
 import CustomDatePicker from "../components/common/CustomDatePicker";
-import { trackDataExport } from "../utils/analytics";
+import { exportCsv } from "../components/dataexport/ExportCsv.jsx";
+import { exportPDF } from "../components/dataexport/PdfExport.jsx";
 
 const PostureData = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   // 날짜 필터 상태
   const [startDate, setStartDate] = useState(null);
@@ -51,6 +51,13 @@ const PostureData = () => {
     usePagination(filteredHistory, 20);
 
   const { rechartsLoaded, rechartsComponents } = useRecharts();
+
+  // PieChart 데이터 useMemo로 생성 (언어 변경 시 갱신)
+  const pieChartData = useMemo(
+    () => preparePieChartData(filteredHistory, t, i18n.language),
+    [filteredHistory, t, i18n.language]
+  );
+  // MetricsChart 라벨 useMemo 예시 (MetricsChart 내부 리팩토링 필요)
 
   // 점수에 따른 상태 반환
   const getScoreStatus = (score) => {
@@ -92,340 +99,25 @@ const PostureData = () => {
     return afterStart && beforeEnd;
   });
 
-  // 데이터 내보내기
-  const exportData = useCallback(() => {
-    // CSV 헤더 생성 (최신 지표 포함)
-    const headers = [
-      t("data.export.dateTime"),
-      t("detection.metrics.score"),
-      t("data.export.status"),
-      t("detection.metrics.neckAngle"),
-      t("detection.metrics.shoulderSlope"),
-      t("detection.metrics.headForward"),
-      t("detection.metrics.shoulderHeightDiff"),
-      t("data.export.cervicalLordosis"),
-      t("data.export.forwardHeadDistance"),
-      t("data.export.headTilt"),
-      t("data.export.headRotation"),
-      t("data.export.shoulderHeightDiffMm"),
-      t("data.export.scapularWingingLeft"),
-      t("data.export.scapularWingingRight"),
-      t("data.export.shoulderForwardMovement"),
-      t("data.export.feedback"),
-    ];
+  // CSV 데이터 내보내기
+  const handleExportCsv = useCallback(() => {
+    exportCsv(filteredHistory, startDate, endDate, t);
+  }, [filteredHistory, startDate, endDate, t]);
 
-    // CSV 데이터 생성
-    const csvData = filteredHistory
-      .slice()
-      .reverse()
-      .map((record) => {
-        const status = getScoreStatus(record.score);
-        const feedback = record.issues ? record.issues.join("; ") : "";
-
-        return [
-          formatDate(record.timestamp),
-          record.score,
-          status.text,
-          record.neckAngle,
-          record.shoulderSlope,
-          record.headForward,
-          record.shoulderHeightDiff,
-          record.cervicalLordosis || 0,
-          record.forwardHeadDistance || 0,
-          record.headTilt || 0,
-          record.headRotation || 0,
-          record.leftShoulderHeightDiff || 0,
-          record.leftScapularWinging ? "예" : "아니오",
-          record.rightScapularWinging ? "예" : "아니오",
-          record.shoulderForwardMovement || 0,
-          feedback,
-        ];
-      });
-
-    // CSV 문자열 생성
-    const csvContent = [
-      headers.join(","),
-      ...csvData.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    // BOM 추가 (한글 깨짐 방지)
-    const BOM = "\uFEFF";
-    const csvWithBOM = BOM + csvContent;
-
-    // 파일 다운로드
-    const dataBlob = new Blob([csvWithBOM], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${t("data.export.postureData")}_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    trackDataExport("csv", {
-      recordCount: filteredHistory.length,
-      dateRange: `${startDate} ~ ${endDate}`,
-    });
-  }, [filteredHistory, getScoreStatus, formatDate, startDate, endDate, t]);
-
-  // PDF 리포트 생성
-  const exportPDF = useCallback(() => {
-    // PDF 문서 생성 (가로 방향)
-    const doc = new jsPDF("landscape", "mm", "a4");
-
-    // 제목 추가
-    doc.setFontSize(20);
-    doc.text(t("data.export.postureAnalysisReport"), 140, 20, {
-      align: "center",
-    });
-
-    // 생성일 추가
-    doc.setFontSize(12);
-    doc.text(
-      `${t("data.export.generatedDate")}: ${new Date().toLocaleString(
-        "ko-KR"
-      )}`,
-      20,
-      35
-    );
-    doc.text(
-      `${t("data.stats.totalRecords")}: ${filteredHistory.length}${t(
-        "data.export.records"
-      )}`,
-      20,
-      45
-    );
-
-    // 통계 정보 추가
-    doc.setFontSize(14);
-    doc.text(t("data.stats.title"), 20, 60);
-    doc.setFontSize(10);
-    doc.text(
-      `${t("data.stats.averageScore")}: ${stats?.avgScore || 0}${t(
-        "data.export.points"
-      )}`,
-      20,
-      70
-    );
-    doc.text(
-      `${t("data.stats.bestScore")}: ${stats?.maxScore || 0}${t(
-        "data.export.points"
-      )}`,
-      20,
-      80
-    );
-    doc.text(
-      `${t("data.export.minScore")}: ${stats?.minScore || 0}${t(
-        "data.export.points"
-      )}`,
-      20,
-      90
-    );
-    doc.text(
-      `${t("data.stats.improvement")}: ${stats?.improvement || 0}${t(
-        "data.export.points"
-      )}`,
-      20,
-      100
-    );
-    doc.text(
-      `${t("data.export.consistency")}: ${stats?.consistency || 0}%`,
-      20,
-      110
-    );
-
-    // 자세 분포 정보
-    doc.text(
-      `${t("detection.posture.perfect")}: ${stats?.excellentCount || 0}${t(
-        "data.export.times"
-      )}`,
-      80,
-      70
-    );
-    doc.text(
-      `${t("detection.posture.good")}: ${stats?.goodPostureCount || 0}${t(
-        "data.export.times"
-      )}`,
-      80,
-      80
-    );
-    doc.text(
-      `${t("detection.posture.normal")}: ${stats?.normalPostureCount || 0}${t(
-        "data.export.times"
-      )}`,
-      80,
-      90
-    );
-    doc.text(
-      `${t("detection.posture.bad")}: ${stats?.poorPostureCount || 0}${t(
-        "data.export.times"
-      )}`,
-      80,
-      100
-    );
-
-    // 측정 지표 정보
-    doc.setFontSize(14);
-    doc.text(t("data.metrics.title"), 20, 125);
-    doc.setFontSize(8);
-    doc.text(
-      `${t("detection.metrics.neckAngle")}: -45°~45° | ${t(
-        "detection.metrics.shoulderSlope"
-      )}: -10°~10° | ${t("detection.metrics.headForward")}: ≤15%`,
-      20,
-      135
-    );
-    doc.text(
-      `${t("detection.metrics.shoulderHeightDiff")}: ≤8% | ${t(
-        "data.export.cervicalLordosis"
-      )}: -30°~30° | ${t("data.export.forwardHeadDistance")}: ≤100mm`,
-      20,
-      145
-    );
-    doc.text(
-      `${t("data.export.headTilt")}: -15°~15° | ${t(
-        "data.export.headRotation"
-      )}: ≤15° | ${t("data.export.shoulderHeightDiffMm")}: ≤40mm`,
-      20,
-      155
-    );
-    doc.text(
-      `${t("data.export.scapularWinging")}: ${t("data.export.none")} | ${t(
-        "data.export.shoulderForwardMovement"
-      )}: ≤150mm`,
-      20,
-      165
-    );
-
-    // 데이터 테이블 생성
-    const headers = [
-      t("data.export.dateTime"),
-      t("detection.metrics.score"),
-      t("data.export.status"),
-      t("detection.metrics.neckAngle"),
-      t("detection.metrics.shoulderSlope"),
-      t("detection.metrics.headForward"),
-      t("detection.metrics.shoulderHeightDiff"),
-      t("data.export.cervicalLordosis"),
-      t("data.export.forwardHeadDistance"),
-      t("data.export.headTilt"),
-      t("data.export.headRotation"),
-      t("data.export.shoulderHeightDiffMm"),
-      t("data.export.scapularWingingLeft"),
-      t("data.export.scapularWingingRight"),
-      t("data.export.shoulderForwardMovement"),
-      t("data.export.feedback"),
-    ];
-
-    const tableData = filteredHistory
-      .slice()
-      .reverse()
-      .slice(0, 20) // 최근 20개만 표시 (PDF 공간 제약)
-      .map((record) => {
-        const status = getScoreStatus(record.score);
-        const feedback = record.issues ? record.issues.join("; ") : "";
-
-        return [
-          formatDate(record.timestamp),
-          record.score,
-          status.text,
-          record.neckAngle,
-          record.shoulderSlope,
-          record.headForward,
-          record.shoulderHeightDiff,
-          record.cervicalLordosis || 0,
-          record.forwardHeadDistance || 0,
-          record.headTilt || 0,
-          record.headRotation || 0,
-          record.leftShoulderHeightDiff || 0,
-          record.leftScapularWinging ? "예" : "아니오",
-          record.rightScapularWinging ? "예" : "아니오",
-          record.shoulderForwardMovement || 0,
-          feedback.length > 50 ? feedback.substring(0, 50) + "..." : feedback,
-        ];
-      });
-
-    // 테이블 생성
-    autoTable(doc, {
-      head: [headers],
-      body: tableData,
-      startY: 180,
-      theme: "grid",
-      styles: {
-        fontSize: 6,
-        cellPadding: 1,
-        overflow: "linebreak",
-        halign: "center",
-      },
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
-      columnStyles: {
-        0: { cellWidth: 25 }, // 날짜/시간
-        1: { cellWidth: 8 }, // 점수
-        2: { cellWidth: 12 }, // 상태
-        3: { cellWidth: 10 }, // 목각도
-        4: { cellWidth: 10 }, // 어깨기울기
-        5: { cellWidth: 12 }, // 머리전방돌출
-        6: { cellWidth: 10 }, // 어깨높이차이
-        7: { cellWidth: 10 }, // 목전만각
-        8: { cellWidth: 12 }, // 머리전방이동
-        9: { cellWidth: 12 }, // 머리좌우기울기
-        10: { cellWidth: 12 }, // 머리좌우회전
-        11: { cellWidth: 12 }, // 어깨높이차이(mm)
-        12: { cellWidth: 10 }, // 견갑골돌출(좌)
-        13: { cellWidth: 10 }, // 견갑골돌출(우)
-        14: { cellWidth: 12 }, // 어깨전방이동
-        15: { cellWidth: 25 }, // 자세피드백
-      },
-    });
-
-    // 페이지 번호 추가
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.text(`${t("data.export.page")} ${i} / ${pageCount}`, 140, 200, {
-        align: "center",
-      });
-    }
-
-    // PDF 파일 다운로드
-    doc.save(
-      `${t("data.export.postureData")}_${t("data.export.report")}_${
-        new Date().toISOString().split("T")[0]
-      }.pdf`
-    );
-    trackDataExport("pdf", {
-      recordCount: filteredHistory.length,
-      dateRange: `${startDate} ~ ${endDate}`,
-    });
-  }, [
-    filteredHistory,
-    getScoreStatus,
-    formatDate,
-    stats,
-    startDate,
-    endDate,
-    t,
-  ]);
+  // PDF 데이터 내보내기
+  const handleExportPdf = useCallback(() => {
+    exportPDF(filteredHistory, stats, startDate, endDate, t);
+  }, [filteredHistory, stats, startDate, endDate, t]);
 
   return (
     <DataContainer>
       <Header>
         <h1>{t("data.title")}</h1>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <ExportButton onClick={exportData}>
+          <ExportButton onClick={handleExportCsv}>
             {t("data.export.csv")}
           </ExportButton>
-          <ExcelExportButton onClick={exportPDF}>
+          <ExcelExportButton onClick={handleExportPdf}>
             {t("data.export.pdf")}
           </ExcelExportButton>
           <ClearButton onClick={clearData}>{t("data.clear")}</ClearButton>
@@ -538,7 +230,7 @@ const PostureData = () => {
           />
           <h3>{t("data.chart.postureDistribution")}</h3>
           <PosturePieChart
-            data={preparePieChartData(filteredHistory)}
+            data={pieChartData}
             rechartsComponents={rechartsComponents}
           />
           <hr
@@ -564,13 +256,13 @@ const PostureData = () => {
             <CustomDatePicker
               value={startDate}
               onChange={setStartDate}
-              placeholder="시작일"
+              placeholder={t("date.start")}
             />
             <span>~</span>
             <CustomDatePicker
               value={endDate}
               onChange={setEndDate}
-              placeholder="종료일"
+              placeholder={t("date.end")}
             />
             <ToggleButton
               onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}

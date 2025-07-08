@@ -28,7 +28,7 @@ const useChartData = () => {
   }, []);
 
   // 자세 분포 파이차트 데이터 준비
-  const preparePieChartData = useCallback((data) => {
+  const preparePieChartData = useCallback((data, t, language) => {
     if (data.length === 0) return [];
 
     const postureCounts = {
@@ -46,10 +46,26 @@ const useChartData = () => {
     });
 
     return [
-      { name: "완벽한 자세", value: postureCounts.perfect, color: "#2196F3" },
-      { name: "좋은 자세", value: postureCounts.good, color: "#4CAF50" },
-      { name: "보통 자세", value: postureCounts.average, color: "#FF9800" },
-      { name: "나쁜 자세", value: postureCounts.poor, color: "#F44336" },
+      {
+        name: t("완벽한 자세"),
+        value: postureCounts.perfect,
+        color: "#2196F3",
+      },
+      {
+        name: t("detection.posture.good"),
+        value: postureCounts.good,
+        color: "#4CAF50",
+      },
+      {
+        name: t("detection.posture.normal"),
+        value: postureCounts.average,
+        color: "#FF9800",
+      },
+      {
+        name: t("detection.posture.bad"),
+        value: postureCounts.poor,
+        color: "#F44336",
+      },
     ].filter((item) => item.value > 0);
   }, []);
 

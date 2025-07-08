@@ -1,47 +1,57 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import MetricsTooltip from "./MetricsTooltip";
 import CustomDatePicker from "../common/CustomDatePicker";
 
-const METRIC_LINES = [
-  {
-    key: "neckAngle",
-    name: "목 각도",
-    color: "#FF6B6B",
-  },
-  {
-    key: "shoulderSlope",
-    name: "어깨 기울기",
-    color: "#4ECDC4",
-  },
-  {
-    key: "headForward",
-    name: "머리 전방 돌출도",
-    color: "#45B7D1",
-  },
-  {
-    key: "cervicalLordosis",
-    name: "목 전만각",
-    color: "#FFA500",
-  },
-  {
-    key: "headTilt",
-    name: "머리 좌우 기울기",
-    color: "#9B59B6",
-  },
-  {
-    key: "headRotation",
-    name: "머리 좌우 회전",
-    color: "#E74C3C",
-  },
-];
-
 const MetricsChart = ({ data, rechartsComponents }) => {
-  const [selectedLines, setSelectedLines] = useState(
-    METRIC_LINES.map((line) => line.key)
-  );
+  const { t, i18n } = useTranslation();
+  const [selectedLines, setSelectedLines] = useState([]);
   // 날짜 필터 상태
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+
+  // 지표 라벨 useMemo로 관리 (언어 변경 시 갱신)
+  const METRIC_LINES = useMemo(
+    () => [
+      {
+        key: "neckAngle",
+        name: t("detection.metrics.neckAngle"),
+        color: "#FF6B6B",
+      },
+      {
+        key: "shoulderSlope",
+        name: t("detection.metrics.shoulderSlope"),
+        color: "#4ECDC4",
+      },
+      {
+        key: "headForward",
+        name: t("detection.metrics.headForward"),
+        color: "#45B7D1",
+      },
+      {
+        key: "cervicalLordosis",
+        name: t("data.export.cervicalLordosis"),
+        color: "#FFA500",
+      },
+      {
+        key: "headTilt",
+        name: t("data.export.headTilt"),
+        color: "#9B59B6",
+      },
+      {
+        key: "headRotation",
+        name: t("data.export.headRotation"),
+        color: "#E74C3C",
+      },
+    ],
+    [t, i18n.language]
+  );
+
+  // 최초 마운트 시 전체 선택
+  React.useEffect(() => {
+    setSelectedLines(METRIC_LINES.map((line) => line.key));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
 
   if (!rechartsComponents) return null;
 
@@ -85,13 +95,13 @@ const MetricsChart = ({ data, rechartsComponents }) => {
         <CustomDatePicker
           value={startDate}
           onChange={setStartDate}
-          placeholder="시작일 선택"
+          placeholder={t("date.start")}
         />
         <span>~</span>
         <CustomDatePicker
           value={endDate}
           onChange={setEndDate}
-          placeholder="종료일 선택"
+          placeholder={t("date.end")}
         />
       </div>
       {/* 지표 선택 토글 버튼 */}
