@@ -8,6 +8,7 @@ export async function exportPDF({
   t,
   getScoreStatus,
   formatDate,
+  language = "ko",
 }) {
   // PDF 문서 생성 (가로 방향)
   const doc = new jsPDF("landscape", "mm", "a4");
@@ -39,8 +40,15 @@ export async function exportPDF({
 
   // 생성일 추가
   doc.setFontSize(12);
+  const localeMap = {
+    ko: "ko-KR",
+    en: "en-US",
+    ja: "ja-JP",
+  };
+  const locale = localeMap[language] || "ko-KR";
+
   doc.text(
-    `${t("data.export.generatedDate")}: ${new Date().toLocaleString("ko-KR")}`,
+    `${t("data.export.generatedDate")}: ${new Date().toLocaleString(locale)}`,
     20,
     35
   );

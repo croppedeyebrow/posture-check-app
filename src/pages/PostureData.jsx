@@ -72,7 +72,15 @@ const PostureData = () => {
 
   // 날짜 포맷팅
   const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString("ko-KR", {
+    const localeMap = {
+      ko: "ko-KR",
+      en: "en-US",
+      ja: "ja-JP",
+    };
+
+    const locale = localeMap[i18n.language] || "ko-KR";
+
+    return new Date(timestamp).toLocaleString(locale, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -101,13 +109,13 @@ const PostureData = () => {
 
   // CSV 데이터 내보내기
   const handleExportCsv = useCallback(() => {
-    exportCsv(filteredHistory, startDate, endDate, t);
-  }, [filteredHistory, startDate, endDate, t]);
+    exportCsv(filteredHistory, startDate, endDate, t, i18n.language);
+  }, [filteredHistory, startDate, endDate, t, i18n.language]);
 
   // PDF 데이터 내보내기
   const handleExportPdf = useCallback(() => {
-    exportPDF(filteredHistory, stats, startDate, endDate, t);
-  }, [filteredHistory, stats, startDate, endDate, t]);
+    exportPDF(filteredHistory, stats, startDate, endDate, t, i18n.language);
+  }, [filteredHistory, stats, startDate, endDate, t, i18n.language]);
 
   return (
     <DataContainer>
@@ -218,7 +226,7 @@ const PostureData = () => {
         <ChartContainer>
           <h3>{t("data.chart.scoreTrend")}</h3>
           <ScoreChart
-            data={prepareChartData(filteredHistory)}
+            data={prepareChartData(filteredHistory, i18n.language)}
             rechartsComponents={rechartsComponents}
           />
           <hr
@@ -242,7 +250,7 @@ const PostureData = () => {
           />
           <h3>{t("data.chart.metrics")}</h3>
           <MetricsChart
-            data={prepareMetricsChartData(filteredByDate)}
+            data={prepareMetricsChartData(filteredByDate, i18n.language)}
             rechartsComponents={rechartsComponents}
           />
         </ChartContainer>

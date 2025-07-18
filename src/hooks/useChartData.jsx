@@ -2,23 +2,30 @@ import { useCallback } from "react";
 
 const useChartData = () => {
   // 점수 변화 그래프 데이터 준비
-  const prepareChartData = useCallback((data) => {
+  const prepareChartData = useCallback((data, language = "ko") => {
     if (data.length === 0) return [];
 
     // 최근 50개 데이터만 사용 (그래프가 너무 복잡해지지 않도록)
     const recentData = data.slice(-50);
 
+    const localeMap = {
+      ko: "ko-KR",
+      en: "en-US",
+      ja: "ja-JP",
+    };
+    const locale = localeMap[language] || "ko-KR";
+
     return recentData.map((record, index) => ({
       index: index + 1,
       score: record.score,
       timestamp: record.timestamp,
-      date: new Date(record.timestamp).toLocaleDateString("ko-KR", {
+      date: new Date(record.timestamp).toLocaleDateString(locale, {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
       }),
-      dateTime: new Date(record.timestamp).toLocaleString("ko-KR", {
+      dateTime: new Date(record.timestamp).toLocaleString(locale, {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
@@ -28,7 +35,7 @@ const useChartData = () => {
   }, []);
 
   // 자세 분포 파이차트 데이터 준비
-  const preparePieChartData = useCallback((data, t, language) => {
+  const preparePieChartData = useCallback((data, t) => {
     if (data.length === 0) return [];
 
     const postureCounts = {
@@ -70,11 +77,18 @@ const useChartData = () => {
   }, []);
 
   // 자세 지표 선그래프 데이터 준비
-  const prepareMetricsChartData = useCallback((data) => {
+  const prepareMetricsChartData = useCallback((data, language = "ko") => {
     if (data.length === 0) return [];
 
     // 최근 30개 데이터만 사용 (지표 그래프는 더 적게)
     const recentData = data.slice(-30);
+
+    const localeMap = {
+      ko: "ko-KR",
+      en: "en-US",
+      ja: "ja-JP",
+    };
+    const locale = localeMap[language] || "ko-KR";
 
     return recentData.map((record, index) => ({
       index: index + 1,
@@ -88,13 +102,13 @@ const useChartData = () => {
       headRotation: Math.abs(parseFloat(record.headRotation || 0)),
       shoulderForwardMovement: parseFloat(record.shoulderForwardMovement || 0),
       timestamp: record.timestamp,
-      date: new Date(record.timestamp).toLocaleDateString("ko-KR", {
+      date: new Date(record.timestamp).toLocaleDateString(locale, {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
       }),
-      dateTime: new Date(record.timestamp).toLocaleString("ko-KR", {
+      dateTime: new Date(record.timestamp).toLocaleString(locale, {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",

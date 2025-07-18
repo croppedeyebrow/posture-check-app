@@ -126,6 +126,18 @@ const ko = {
       },
     },
 
+    // 웹캠
+    webcam: {
+      activated: "웹캠 활성화됨",
+      deactivated: "웹캠 비활성화됨",
+      start: "웹캠 시작",
+      stop: "웹캠 중지",
+      capture: "사진 촬영",
+      capturedImage: "촬영된 사진",
+      startSuccess: "웹캠이 성공적으로 시작되었습니다.",
+      error: "웹캠 오류:",
+    },
+
     // 알림
     notifications: {
       webcamError: "웹캠 접근 오류",
@@ -260,6 +272,18 @@ const en = {
       },
     },
 
+    // Webcam
+    webcam: {
+      activated: "Webcam activated",
+      deactivated: "Webcam deactivated",
+      start: "Start Webcam",
+      stop: "Stop Webcam",
+      capture: "Take Photo",
+      capturedImage: "Captured Image",
+      startSuccess: "Webcam started successfully.",
+      error: "Webcam error:",
+    },
+
     // Notifications
     notifications: {
       webcamError: "Webcam access error",
@@ -392,6 +416,18 @@ const ja = {
       metrics: {
         title: "測定指標 (計10個)",
       },
+    },
+
+    // ウェブカメラ
+    webcam: {
+      activated: "ウェブカメラ有効",
+      deactivated: "ウェブカメラ無効",
+      start: "ウェブカメラ開始",
+      stop: "ウェブカメラ停止",
+      capture: "写真撮影",
+      capturedImage: "撮影された写真",
+      startSuccess: "ウェブカメラが正常に開始されました。",
+      error: "ウェブカメラエラー:",
     },
 
     // 通知

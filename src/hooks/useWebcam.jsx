@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback } from "react";
 
 const useWebcam = (
-  videoConstraints = { width: 640, height: 480, facingMode: "user" }
+  videoConstraints = { width: 640, height: 480, facingMode: "user" },
+  onSuccess = () => console.log("웹캠이 성공적으로 시작되었습니다."),
+  onError = (error) => console.error("웹캠 오류:", error)
 ) => {
   const webcamRef = useRef(null);
   const [isStarted, setIsStarted] = useState(false);
@@ -23,18 +25,21 @@ const useWebcam = (
 
   // 웹캠 성공 핸들러
   const handleUserMedia = useCallback(() => {
-    console.log("웹캠이 성공적으로 시작되었습니다.");
+    onSuccess();
     setIsActive(true);
     setError(null);
-  }, []);
+  }, [onSuccess]);
 
   // 웹캠 오류 핸들러
-  const handleUserMediaError = useCallback((error) => {
-    console.error("웹캠 오류:", error);
-    setIsStarted(false);
-    setIsActive(false);
-    setError(error);
-  }, []);
+  const handleUserMediaError = useCallback(
+    (error) => {
+      onError(error);
+      setIsStarted(false);
+      setIsActive(false);
+      setError(error);
+    },
+    [onError]
+  );
 
   // 스크린샷 캡처
   const capture = useCallback(() => {

@@ -11,8 +11,16 @@ const getScoreStatus = (score, t) => {
 };
 
 // 날짜 포맷팅
-const formatDate = (timestamp) => {
-  return new Date(timestamp).toLocaleString("ko-KR", {
+const formatDate = (timestamp, language = "ko") => {
+  const localeMap = {
+    ko: "ko-KR",
+    en: "en-US",
+    ja: "ja-JP",
+  };
+
+  const locale = localeMap[language] || "ko-KR";
+
+  return new Date(timestamp).toLocaleString(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -21,7 +29,13 @@ const formatDate = (timestamp) => {
   });
 };
 
-export const exportCsv = (filteredHistory, startDate, endDate, t) => {
+export const exportCsv = (
+  filteredHistory,
+  startDate,
+  endDate,
+  t,
+  language = "ko"
+) => {
   // CSV 헤더 생성 (최신 지표 포함)
   const headers = [
     t("data.export.dateTime"),
@@ -51,7 +65,7 @@ export const exportCsv = (filteredHistory, startDate, endDate, t) => {
       const feedback = record.issues ? record.issues.join("; ") : "";
 
       return [
-        formatDate(record.timestamp),
+        formatDate(record.timestamp, language),
         record.score,
         status.text,
         record.neckAngle,

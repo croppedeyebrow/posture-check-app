@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
 import {
   WebcamContainer,
@@ -12,6 +13,7 @@ import {
 } from "../styles/WebcamController.styles";
 
 const WebcamController = ({ onStatusChange }) => {
+  const { t } = useTranslation();
   const webcamRef = useRef(null);
   const [isStarted, setIsStarted] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
@@ -40,22 +42,22 @@ const WebcamController = ({ onStatusChange }) => {
   }, []);
 
   const handleUserMedia = useCallback(() => {
-    console.log("웹캠이 성공적으로 시작되었습니다.");
-  }, []);
+    console.log(t("webcam.startSuccess"));
+  }, [t]);
 
   const handleUserMediaError = useCallback(
     (error) => {
-      console.error("웹캠 오류:", error);
+      console.error(t("webcam.error"), error);
       setIsStarted(false);
       onStatusChange?.(false);
     },
-    [onStatusChange]
+    [onStatusChange, t]
   );
 
   return (
     <WebcamContainer>
       <StatusText isActive={isStarted}>
-        {isStarted ? "웹캠 활성화됨" : "웹캠 비활성화됨"}
+        {isStarted ? t("webcam.activated") : t("webcam.deactivated")}
       </StatusText>
 
       <WebcamWrapper>
@@ -79,21 +81,23 @@ const WebcamController = ({ onStatusChange }) => {
 
       <ControlsContainer>
         {!isStarted ? (
-          <StartButton onClick={startWebcam}>웹캠 시작</StartButton>
+          <StartButton onClick={startWebcam}>{t("webcam.start")}</StartButton>
         ) : (
           <>
-            <StopButton onClick={stopWebcam}>웹캠 중지</StopButton>
-            <CaptureButton onClick={capture}>사진 촬영</CaptureButton>
+            <StopButton onClick={stopWebcam}>{t("webcam.stop")}</StopButton>
+            <CaptureButton onClick={capture}>
+              {t("webcam.capture")}
+            </CaptureButton>
           </>
         )}
       </ControlsContainer>
 
       {capturedImage && (
         <div>
-          <h3>촬영된 사진</h3>
+          <h3>{t("webcam.capturedImage")}</h3>
           <img
             src={capturedImage}
-            alt="촬영된 사진"
+            alt={t("webcam.capturedImage")}
             style={{
               maxWidth: "320px",
               borderRadius: "8px",

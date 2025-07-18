@@ -50,7 +50,11 @@ const PostureDetection = () => {
   const { mediaPipeRef, poseRef, initializePose, cleanupPose, processFrame } =
     useMediaPipe();
   const { analyzePosture } = usePostureAnalysis();
-  const { webcamRef, isStarted, startWebcam, stopWebcam } = useWebcam();
+  const { webcamRef, isStarted, startWebcam, stopWebcam } = useWebcam(
+    undefined,
+    () => console.log(t("webcam.startSuccess")),
+    (error) => console.error(t("webcam.error"), error)
+  );
 
   const videoConstraints = {
     width: 640,
@@ -124,7 +128,7 @@ const PostureDetection = () => {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("자세 감지 시작 오류:", error);
+      console.error(t("detection.status.error"), error);
       setPostureStatus(t("detection.status.error"));
     }
   }, [initializePose, onPoseResults, startWebcam, t]);
@@ -198,9 +202,9 @@ const PostureDetection = () => {
             audio={false}
             videoConstraints={videoConstraints}
             mirrored={true}
-            onUserMedia={() => console.log("웹캠 시작됨")}
+            onUserMedia={() => console.log(t("webcam.startSuccess"))}
             onUserMediaError={(error) => {
-              console.error("웹캠 오류:", error);
+              console.error(t("webcam.error"), error);
               setIsDetecting(false);
               trackError(error, { context: "webcam_error" });
             }}
