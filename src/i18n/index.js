@@ -5,6 +5,29 @@ import LanguageDetector from "i18next-browser-languagedetector";
 // 한국어 번역
 const ko = {
   translation: {
+    // 앱 정보
+    app: {
+      name: "AI 자세교정",
+    },
+
+    // 인증
+    auth: {
+      login: "로그인",
+      register: "회원가입",
+      logout: "로그아웃",
+      name: "이름",
+      email: "이메일",
+      password: "비밀번호",
+      confirmPassword: "비밀번호 확인",
+      loggingIn: "로그인 중...",
+      registering: "회원가입 중...",
+      loginSuccess: "로그인 성공",
+      registerSuccess: "회원가입 성공",
+      loginFailed: "로그인 실패",
+      registerFailed: "회원가입 실패",
+      logoutSuccess: "로그아웃 완료",
+    },
+
     // 공통
     common: {
       language: "언어",
@@ -151,6 +174,29 @@ const ko = {
 // 영어 번역
 const en = {
   translation: {
+    // App info
+    app: {
+      name: "AI Posture Correction",
+    },
+
+    // Auth
+    auth: {
+      login: "Login",
+      register: "Register",
+      logout: "Logout",
+      name: "Name",
+      email: "Email",
+      password: "Password",
+      confirmPassword: "Confirm Password",
+      loggingIn: "Logging in...",
+      registering: "Registering...",
+      loginSuccess: "Login successful",
+      registerSuccess: "Registration successful",
+      loginFailed: "Login failed",
+      registerFailed: "Registration failed",
+      logoutSuccess: "Logout completed",
+    },
+
     // Common
     common: {
       language: "Language",
@@ -297,6 +343,29 @@ const en = {
 // 일본어 번역
 const ja = {
   translation: {
+    // アプリ情報
+    app: {
+      name: "AI姿勢矯正",
+    },
+
+    // 認証
+    auth: {
+      login: "ログイン",
+      register: "新規登録",
+      logout: "ログアウト",
+      name: "名前",
+      email: "メールアドレス",
+      password: "パスワード",
+      confirmPassword: "パスワード確認",
+      loggingIn: "ログイン中...",
+      registering: "登録中...",
+      loginSuccess: "ログイン成功",
+      registerSuccess: "登録成功",
+      loginFailed: "ログイン失敗",
+      registerFailed: "登録失敗",
+      logoutSuccess: "ログアウト完了",
+    },
+
     // 共通
     common: {
       language: "言語",

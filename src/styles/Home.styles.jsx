@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 
 export const HomeContainer = styled.div`
   padding: 2rem;
+  padding-top: 6rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 100vh;
 `;
 
 export const Title = styled.h1`

@@ -700,3 +700,201 @@ npm install @mediapipe/pose @mediapipe/camera_utils @mediapipe/drawing_utils
    - `.env.local` 파일은 절대 Git에 커밋하지 마세요
    - 실제 측정 ID를 코드에 하드코딩하지 마세요
    - 환경 변수 파일은 `.gitignore`에 자동으로 포함됩니다
+
+---
+
+### Phase 5: Header 컴포넌트 및 인증 시스템 구축 (2025.08.14)
+
+#### ✅ **구현 완료**
+
+1. **독립적인 Header 컴포넌트 생성**
+
+   ```bash
+   src/components/layout/Header.jsx
+   ```
+
+   - **좌측 로고**: 🧘 아이콘과 "AI 자세교정" 텍스트, 홈으로 이동 기능
+   - **우측 인증**: 로그인/회원가입 버튼 또는 사용자 정보 표시
+   - **고정 헤더**: 스크롤 시 상단에 고정되는 sticky 포지션
+   - **반응형 디자인**: 모바일에서도 최적화된 레이아웃
+
+2. **통합 인증 모달 시스템**
+
+   ```javascript
+   // 탭 기반 로그인/회원가입 인터페이스
+   const [activeTab, setActiveTab] = useState("login"); // 'login' or 'register'
+   const [showAuthModal, setShowAuthModal] = useState(false);
+   ```
+
+   - **탭 전환**: 로그인과 회원가입 간 자유로운 전환
+   - **회원가입 폼**: 이름, 이메일, 비밀번호, 비밀번호 확인
+   - **비밀번호 검증**: 비밀번호와 비밀번호 확인 일치 여부 검증
+   - **API 연동**: `apiClient.auth`를 통한 백엔드 통신
+
+3. **다국어 지원 확장**
+
+   ```javascript
+   // 인증 관련 번역 추가
+   auth: {
+     login: "로그인",
+     register: "회원가입",
+     logout: "로그아웃",
+     name: "이름",
+     email: "이메일",
+     password: "비밀번호",
+     confirmPassword: "비밀번호 확인",
+     loggingIn: "로그인 중...",
+     registering: "회원가입 중...",
+     // ... 기타 인증 관련 번역
+   }
+   ```
+
+   - **한국어**: "회원가입", "이름", "비밀번호 확인" 등
+   - **영어**: "Register", "Name", "Confirm Password" 등
+   - **일본어**: "新規登録", "名前", "パスワード確認" 등
+
+4. **페이지 레이아웃 개선**
+
+   ```css
+   /* 모든 페이지에 상단 패딩 추가 */
+   .page-container {
+     padding-top: 6rem; /* Header 높이만큼 상단 여백 */
+     min-height: 100vh;
+   }
+   ```
+
+   - **Home 페이지**: Header와 겹치지 않도록 상단 패딩 조정
+   - **PostureDetection 페이지**: 상단 패딩 추가
+   - **PostureData 페이지**: 상단 패딩 추가
+
+#### 🎨 **UI/UX 개선사항**
+
+1. **Header 디자인**
+
+   - **그라데이션 배경**: 보라색 계열 그라데이션 (`#667eea` → `#764ba2`)
+   - **로고 호버 효과**: 살짝 확대되는 애니메이션
+   - **버튼 스타일**:
+     - 로그인: 반투명 흰색 배경
+     - 회원가입: 흰색 배경에 보라색 텍스트
+   - **사용자 아바타**: 이름 첫 글자를 원형 아바타로 표시
+
+2. **인증 모달 디자인**
+
+   - **탭 인터페이스**: 활성 탭은 보라색 하단 보더로 강조
+   - **폼 스타일**: 일관된 입력 필드와 버튼 디자인
+   - **에러 메시지**: 빨간색으로 명확한 오류 표시
+   - **로딩 상태**: 버튼 비활성화 및 로딩 텍스트 표시
+
+3. **반응형 디자인**
+
+   - **모바일 최적화**: 작은 화면에서도 사용하기 편한 버튼 크기
+   - **터치 친화적**: 모바일 터치에 최적화된 버튼 간격
+   - **접근성**: 키보드 네비게이션 및 스크린 리더 지원
+
+#### 🔧 **기술적 구현사항**
+
+1. **컴포넌트 구조**
+
+   ```javascript
+   // Header 컴포넌트 구조
+   const Header = () => {
+     const [showAuthModal, setShowAuthModal] = useState(false);
+     const [activeTab, setActiveTab] = useState("login");
+     const [loginData, setLoginData] = useState({ email: "", password: "" });
+     const [registerData, setRegisterData] = useState({
+       name: "",
+       email: "",
+       password: "",
+       confirmPassword: "",
+     });
+
+     // 인증 상태 확인 및 핸들러 함수들
+   };
+   ```
+
+2. **API 통합**
+
+   ```javascript
+   // 인증 관련 API 호출
+   const handleLogin = async (e) => {
+     const response = await apiClient.auth.login(loginData);
+     // 성공 시 모달 닫기 및 페이지 새로고침
+   };
+
+   const handleRegister = async (e) => {
+     // 비밀번호 확인 검증
+     if (registerData.password !== registerData.confirmPassword) {
+       setError("비밀번호가 일치하지 않습니다.");
+       return;
+     }
+
+     const response = await apiClient.auth.register({
+       name: registerData.name,
+       email: registerData.email,
+       password: registerData.password,
+     });
+     // 성공 시 로그인 탭으로 전환
+   };
+   ```
+
+3. **상태 관리**
+
+   - **로컬 상태**: 모달 표시, 활성 탭, 폼 데이터
+   - **API 상태**: 로딩, 에러, 인증 상태
+   - **사용자 상태**: 로그인된 사용자 정보 표시
+
+#### 📱 **사용자 경험 개선**
+
+1. **직관적인 네비게이션**
+
+   - **홈 로고**: 언제든지 홈으로 돌아갈 수 있는 명확한 방법
+   - **인증 상태 표시**: 로그인/비로그인 상태를 명확히 구분
+   - **일관된 디자인**: 모든 페이지에서 동일한 Header 경험
+
+2. **원활한 인증 플로우**
+
+   - **회원가입 → 로그인**: 회원가입 성공 시 자동으로 로그인 탭으로 전환
+   - **에러 처리**: 명확한 오류 메시지와 함께 사용자 안내
+   - **폼 검증**: 실시간 입력 검증 및 비밀번호 확인
+
+3. **접근성 향상**
+
+   - **키보드 네비게이션**: Tab 키로 모든 요소 접근 가능
+   - **스크린 리더**: 적절한 ARIA 라벨과 역할 정의
+   - **색상 대비**: 충분한 색상 대비로 가독성 확보
+
+#### 🔐 **보안 고려사항**
+
+1. **클라이언트 사이드 보안**
+
+   - **입력 검증**: 프론트엔드에서 기본적인 입력 검증
+   - **비밀번호 확인**: 회원가입 시 비밀번호 일치 여부 검증
+   - **XSS 방지**: React의 기본 XSS 방지 기능 활용
+
+2. **API 통신 보안**
+
+   - **HTTPS**: 모든 API 통신은 HTTPS를 통해 암호화
+   - **토큰 관리**: JWT 토큰을 안전하게 저장 및 관리
+   - **에러 처리**: 민감한 정보가 노출되지 않도록 에러 메시지 관리
+
+#### 🚀 **향후 계획**
+
+1. **인증 기능 확장**
+
+   - **소셜 로그인**: Google, Facebook, Apple 로그인 지원
+   - **비밀번호 재설정**: 이메일을 통한 비밀번호 재설정 기능
+   - **이메일 인증**: 회원가입 시 이메일 인증 기능
+
+2. **사용자 프로필**
+
+   - **프로필 편집**: 사용자 정보 수정 기능
+   - **프로필 이미지**: 사용자 아바타 이미지 업로드
+   - **개인 설정**: 언어, 테마, 알림 설정 등
+
+3. **데이터 동기화**
+
+   - **클라우드 저장**: 로그인한 사용자의 데이터 클라우드 동기화
+   - **기기 간 동기**: 여러 기기에서 동일한 데이터 접근
+   - **데이터 백업**: 자동 데이터 백업 및 복원 기능
+
+이번 업데이트를 통해 사용자 인증 시스템이 완전히 구축되었으며, 향후 백엔드 API와의 연동을 통해 완전한 사용자 관리 시스템을 제공할 수 있게 되었습니다.

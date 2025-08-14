@@ -6,6 +6,8 @@ export const DetectionContainer = styled.div`
   flex-direction: column;
   align-items: center;
   padding: 2rem;
+  padding-top: 6rem;
+  min-height: 100vh;
 `;
 
 export const VideoContainer = styled.div`

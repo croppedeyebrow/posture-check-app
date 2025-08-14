@@ -4,8 +4,10 @@ export const DataContainer = styled.div`
   display: flex;
   flex-direction: column;
   padding: 2rem;
+  padding-top: 6rem;
   max-width: 1200px;
   margin: 0 auto;
+  min-height: 100vh;
 `;
 
 export const Header = styled.div`

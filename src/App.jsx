@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { theme } from "./styles/theme";
 import GlobalStyle from "./styles/GlobalStyle";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import Header from "./components/layout/Header";
 import LanguageSelector from "./components/common/LanguageSelector";
 import Home from "./pages/Home";
 import PostureDetection from "./pages/PostureDetection";
@@ -15,6 +16,7 @@ function App() {
       <GlobalStyle />
       <Router>
         <GoogleAnalytics />
+        <Header />
         <LanguageSelector />
         <Routes>
           <Route path="/" element={<Home />} />
