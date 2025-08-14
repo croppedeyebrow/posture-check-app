@@ -5,6 +5,8 @@ import Webcam from "react-webcam";
 import useMediaPipe from "../hooks/useMediaPipe.jsx";
 import usePostureAnalysis from "../hooks/usePostureAnalysis.jsx";
 import useWebcam from "../hooks/useWebcam.jsx";
+// API 클라이언트 import
+import { apiHelpers } from "../api/apiClient.js";
 // MediaPipe 라이브러리들을 동적 임포트로 변경
 // import { Pose } from "@mediapipe/pose";
 // import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
@@ -45,6 +47,31 @@ const PostureDetection = () => {
   const [notification, setNotification] = useState(null);
 
   const animationFrameRef = useRef(null);
+
+  // 자세 데이터 저장 함수
+  const handlePostureDataSave = useCallback(async (postureData) => {
+    try {
+      // 자세 측정 데이터 저장
+      const savedData = await apiHelpers.saveAndSyncPostureData({
+        score: postureData.score,
+        neckAngle: postureData.neckAngle,
+        shoulderSlope: postureData.shoulderSlope,
+        headForward: postureData.headForward,
+        shoulderHeightDiff: postureData.shoulderHeightDiff,
+        cervicalLordosis: postureData.cervicalLordosis,
+        forwardHeadDistance: postureData.forwardHeadDistance,
+        headTilt: postureData.headTilt,
+        headRotation: postureData.headRotation,
+        shoulderForwardMovement: postureData.shoulderForwardMovement,
+        issues: postureData.issues || [],
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log("자세 데이터 저장 완료:", savedData);
+    } catch (error) {
+      console.error("자세 데이터 저장 실패:", error);
+    }
+  }, []);
 
   // 커스텀 훅들 사용
   const { mediaPipeRef, poseRef, initializePose, cleanupPose, processFrame } =
@@ -106,6 +133,9 @@ const PostureDetection = () => {
         if (analysisResult) {
           setPostureStatus(analysisResult.status);
           setPostureData(analysisResult.postureData);
+
+          // 자세 데이터 저장 (API 클라이언트 사용)
+          handlePostureDataSave(analysisResult.postureData);
         }
       }
 
