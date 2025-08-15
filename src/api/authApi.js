@@ -4,7 +4,7 @@ import api from "./index.js";
 export const authApi = {
   // 사용자 로그인
   login: async (credentials) => {
-    const response = await api.post("/auth/login", credentials);
+    const response = await api.post("/api/v1/users/login", credentials);
 
     // 토큰을 로컬 스토리지에 저장
     if (response.access_token) {
@@ -20,7 +20,7 @@ export const authApi = {
   logout: async () => {
     try {
       // 서버에 로그아웃 요청
-      await api.post("/auth/logout");
+      await api.post("/api/v1/users/logout");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
@@ -33,7 +33,7 @@ export const authApi = {
 
   // 사용자 회원가입
   register: async (userData) => {
-    return await api.post("/auth/register", userData);
+    return await api.post("/api/v1/users/register", userData);
   },
 
   // 토큰 갱신
@@ -43,7 +43,7 @@ export const authApi = {
       throw new Error("Refresh token not found");
     }
 
-    const response = await api.post("/auth/refresh", {
+    const response = await api.post("/api/v1/users/refresh", {
       refresh_token: refreshToken,
     });
 
@@ -59,47 +59,47 @@ export const authApi = {
 
   // 현재 사용자 정보 조회
   getCurrentUser: async () => {
-    return await api.get("/auth/me");
+    return await api.get("/api/v1/users/me");
   },
 
   // 사용자 프로필 수정
   updateProfile: async (profileData) => {
-    return await api.put("/auth/profile", profileData);
+    return await api.put("/api/v1/users/profile", profileData);
   },
 
   // 비밀번호 변경
   changePassword: async (passwordData) => {
-    return await api.post("/auth/change-password", passwordData);
+    return await api.post("/api/v1/users/change-password", passwordData);
   },
 
   // 비밀번호 재설정 요청
   requestPasswordReset: async (email) => {
-    return await api.post("/auth/forgot-password", { email });
+    return await api.post("/api/v1/users/forgot-password", { email });
   },
 
   // 비밀번호 재설정
   resetPassword: async (resetData) => {
-    return await api.post("/auth/reset-password", resetData);
+    return await api.post("/api/v1/users/reset-password", resetData);
   },
 
   // 이메일 인증
   verifyEmail: async (token) => {
-    return await api.post("/auth/verify-email", { token });
+    return await api.post("/api/v1/users/verify-email", { token });
   },
 
   // 이메일 재인증 요청
   resendVerificationEmail: async () => {
-    return await api.post("/auth/resend-verification");
+    return await api.post("/api/v1/users/resend-verification");
   },
 
   // 소셜 로그인 (Google, GitHub 등)
   socialLogin: async (provider, code) => {
-    return await api.post(`/auth/${provider}`, { code });
+    return await api.post(`/api/v1/users/${provider}`, { code });
   },
 
   // 계정 삭제
   deleteAccount: async (password) => {
-    const response = await api.delete("/auth/account", { password });
+    const response = await api.delete("/api/v1/users/account", { password });
 
     // 계정 삭제 성공 시 로컬 스토리지 정리
     if (response.success) {
@@ -118,7 +118,17 @@ export const authApi = {
 
     return {
       isAuthenticated: !!token,
-      user: user ? JSON.parse(user) : null,
+      user: user
+        ? (() => {
+            try {
+              return JSON.parse(user);
+            } catch (error) {
+              console.error("Failed to parse user data:", error);
+              localStorage.removeItem("user");
+              return null;
+            }
+          })()
+        : null,
       token,
     };
   },

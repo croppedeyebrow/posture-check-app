@@ -14,7 +14,6 @@ const usePostureAnalysis = () => {
       const leftShoulder = landmarks[11];
       const rightShoulder = landmarks[12];
       const leftEar = landmarks[7];
-      const rightEar = landmarks[8];
       const leftEye = landmarks[2];
       const rightEye = landmarks[5];
       const leftHip = landmarks[23];
@@ -74,11 +73,25 @@ const usePostureAnalysis = () => {
       const shoulderForwardMovement =
         Math.abs(shoulderMidpoint.x - (leftHip.x + rightHip.x) / 2) * 640;
 
+      // 11. 머리 회전 (Head Rotation) - 좌우 회전 각도
+      const headRotation =
+        Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) *
+        (180 / Math.PI);
+
       // 자세 상태 판단
       let status = "감지 대기 중";
       let issues = [];
       let score = 100;
       let totalDeduction = 0;
+
+      // 머리 회전 검사 (정상: -15° ~ 15°)
+      if (Math.abs(headRotation) > 15) {
+        issues.push({
+          problem: "머리가 측면으로 많이 회전되어 있습니다",
+          solution: "머리를 정면으로 돌려주세요.",
+        });
+        totalDeduction += 4;
+      }
 
       // 목 각도 검사 (정상: -45° ~ 45°)
       if (Math.abs(neckAngle) > 45) {
@@ -235,6 +248,7 @@ const usePostureAnalysis = () => {
         leftScapularWinging: leftScapularWinging,
         rightScapularWinging: rightScapularWinging,
         shoulderForwardMovement: shoulderForwardMovement.toFixed(1),
+        headRotation: headRotation.toFixed(1),
       };
 
       // 전역 상태 업데이트
@@ -253,6 +267,7 @@ const usePostureAnalysis = () => {
         leftScapularWinging,
         rightScapularWinging,
         shoulderForwardMovement,
+        headRotation,
       });
 
       // 로컬 스토리지에 자세 데이터 저장
@@ -274,6 +289,7 @@ const usePostureAnalysis = () => {
         leftScapularWinging,
         rightScapularWinging,
         shoulderForwardMovement,
+        headRotation,
       };
 
       postureHistory.push(newPostureRecord);

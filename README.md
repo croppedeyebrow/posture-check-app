@@ -62,6 +62,47 @@ yarn build
 npx vercel --prod
 ```
 
+## 🔧 백엔드 설정
+
+### 환경 변수 설정
+
+프로젝트 루트에 `.env.local` 파일을 생성하고 다음 설정을 추가하세요:
+
+```bash
+# 백엔드 타입 설정 (docker 또는 local)
+VITE_BACKEND_TYPE=docker
+
+# 도커 백엔드 URL (포트 8000)
+VITE_DOCKER_API_URL=http://localhost:8000
+
+# 로컬 백엔드 URL (포트 8001)
+VITE_LOCAL_API_URL=http://localhost:8001
+
+# Google Analytics 4 측정 ID (선택사항)
+VITE_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+### 백엔드 설정 방법
+
+환경 변수로 백엔드 타입을 설정하면 자동으로 해당 백엔드로 연결됩니다.
+
+### 백엔드 포트 설정
+
+- **도커 백엔드**: `http://localhost:8000`
+- **로컬 백엔드**: `http://localhost:8001`
+
+### 예시 설정
+
+```bash
+# 도커 백엔드 사용 시
+VITE_BACKEND_TYPE=docker
+VITE_DOCKER_API_URL=http://localhost:8000
+
+# 로컬 백엔드 사용 시
+VITE_BACKEND_TYPE=local
+VITE_LOCAL_API_URL=http://localhost:8001
+```
+
 ## 🔍 주요 기능
 
 ### 1. 실시간 자세 감지

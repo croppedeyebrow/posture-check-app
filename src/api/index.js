@@ -1,6 +1,16 @@
 // API 기본 설정
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const getApiBaseUrl = () => {
+  // 환경 변수에서 백엔드 타입 확인 (docker 또는 local)
+  const backendType = import.meta.env.VITE_BACKEND_TYPE || "docker";
+
+  if (backendType === "local") {
+    return import.meta.env.VITE_LOCAL_API_URL || "http://localhost:8001";
+  } else {
+    return import.meta.env.VITE_DOCKER_API_URL || "http://localhost:8000";
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // 공통 헤더 설정
 const getHeaders = () => {

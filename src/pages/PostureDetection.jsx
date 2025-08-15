@@ -65,6 +65,7 @@ const PostureDetection = () => {
         shoulderForwardMovement: postureData.shoulderForwardMovement,
         issues: postureData.issues || [],
         timestamp: new Date().toISOString(),
+        userId: 1, // 기본값 1, 실제로는 로그인된 사용자 ID 사용
       });
 
       console.log("자세 데이터 저장 완료:", savedData);

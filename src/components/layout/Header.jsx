@@ -155,10 +155,10 @@ const TabButton = styled.button`
   border: none;
   font-size: 1rem;
   font-weight: 600;
-  color: ${({ active }) => (active ? "#667eea" : "#666")};
+  color: ${({ $active }) => ($active ? "#667eea" : "#666")};
   cursor: pointer;
   border-bottom: 2px solid
-    ${({ active }) => (active ? "#667eea" : "transparent")};
+    ${({ $active }) => ($active ? "#667eea" : "transparent")};
   transition: all 0.3s ease;
 
   &:hover {
@@ -231,7 +231,7 @@ const Header = () => {
   const [activeTab, setActiveTab] = useState("login"); // 'login' or 'register'
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
-    name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -252,8 +252,10 @@ const Header = () => {
       console.log("로그인 성공:", response.user);
       setShowAuthModal(false);
       setLoginData({ email: "", password: "" });
-      // 페이지 새로고침으로 상태 업데이트
-      window.location.reload();
+      setError("");
+
+      // 로그인 성공 후 홈페이지로 리다이렉션
+      window.location.href = "/";
     } catch (error) {
       console.error("로그인 실패:", error);
       setError(error.message || "로그인에 실패했습니다.");
@@ -276,22 +278,23 @@ const Header = () => {
 
     try {
       const response = await apiClient.auth.register({
-        name: registerData.name,
+        username: registerData.username,
         email: registerData.email,
         password: registerData.password,
       });
       console.log("회원가입 성공:", response.user);
       setShowAuthModal(false);
       setRegisterData({
-        name: "",
+        username: "",
         email: "",
         password: "",
         confirmPassword: "",
       });
-      // 회원가입 성공 후 로그인 탭으로 전환
+      setError("");
+
+      // 회원가입 성공 후 로그인 탭으로 전환하고 메시지 표시
       setActiveTab("login");
-      // 페이지 새로고침으로 상태 업데이트
-      window.location.reload();
+      setError("회원가입이 완료되었습니다. 로그인해주세요.");
     } catch (error) {
       console.error("회원가입 실패:", error);
       setError(error.message || "회원가입에 실패했습니다.");
@@ -304,8 +307,8 @@ const Header = () => {
     try {
       await apiClient.auth.logout();
       console.log("로그아웃 완료");
-      // 페이지 새로고침으로 상태 업데이트
-      window.location.reload();
+      // 로그아웃 후 홈페이지로 리다이렉션
+      window.location.href = "/";
     } catch (error) {
       console.error("로그아웃 실패:", error);
     }
@@ -336,8 +339,10 @@ const Header = () => {
         <AuthContainer>
           {authStatus.isAuthenticated ? (
             <UserInfo>
-              <UserAvatar>{authStatus.user?.name?.charAt(0) || "U"}</UserAvatar>
-              <span>{authStatus.user?.name || "사용자"}</span>
+              <UserAvatar>
+                {authStatus.user?.username?.charAt(0) || "U"}
+              </UserAvatar>
+              <span>{authStatus.user?.username || "사용자"}</span>
               <LogoutButton onClick={handleLogout}>
                 {t("auth.logout")}
               </LogoutButton>
@@ -373,13 +378,13 @@ const Header = () => {
 
             <ModalTabs>
               <TabButton
-                active={activeTab === "login"}
+                $active={activeTab === "login"}
                 onClick={() => setActiveTab("login")}
               >
                 {t("auth.login")}
               </TabButton>
               <TabButton
-                active={activeTab === "register"}
+                $active={activeTab === "register"}
                 onClick={() => setActiveTab("register")}
               >
                 {t("auth.register")}
@@ -413,9 +418,9 @@ const Header = () => {
               <Form onSubmit={handleRegister}>
                 <Input
                   type="text"
-                  name="name"
-                  placeholder={t("auth.name")}
-                  value={registerData.name}
+                  name="username"
+                  placeholder={t("auth.username")}
+                  value={registerData.username}
                   onChange={handleInputChange}
                   required
                 />
