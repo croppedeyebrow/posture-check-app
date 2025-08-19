@@ -62,7 +62,17 @@ export const exportCsv = (
     .reverse()
     .map((record) => {
       const status = getScoreStatus(record.score, t);
-      const feedback = record.issues ? record.issues.join("; ") : "";
+      // issues가 배열인지 확인하고 안전하게 처리
+      let feedback = "";
+      if (record.issues) {
+        if (Array.isArray(record.issues)) {
+          feedback = record.issues.join("; ");
+        } else if (typeof record.issues === "string") {
+          feedback = record.issues;
+        } else if (typeof record.issues === "object") {
+          feedback = JSON.stringify(record.issues);
+        }
+      }
 
       return [
         formatDate(record.timestamp, language),

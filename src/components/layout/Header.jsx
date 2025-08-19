@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -120,16 +120,50 @@ const LogoutButton = styled.button`
 
 const Header = () => {
   const { t } = useTranslation();
+  const [authStatus, setAuthStatus] = useState({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+  });
 
-  // 인증 상태 확인
-  const authStatus = authApi.checkAuthStatus();
+  // 인증 상태 확인 및 업데이트
+  const updateAuthStatus = () => {
+    const status = authApi.checkAuthStatus();
+    setAuthStatus(status);
+  };
 
+  // 컴포넌트 마운트 시 인증 상태 확인
+  useEffect(() => {
+    updateAuthStatus();
+
+    // localStorage 변경 감지를 위한 이벤트 리스너
+    const handleStorageChange = (e) => {
+      if (e.key === "authToken" || e.key === "user") {
+        updateAuthStatus();
+      }
+    };
+
+    // storage 이벤트는 다른 탭에서만 발생하므로, 직접 감지
+    const handleAuthChange = () => {
+      updateAuthStatus();
+    };
+
+    // 커스텀 이벤트 리스너 추가
+    window.addEventListener("authStateChanged", handleAuthChange);
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("authStateChanged", handleAuthChange);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  // 로그아웃 처리
   const handleLogout = async () => {
     try {
       await authApi.logout();
       console.log("로그아웃 완료");
-      // 로그아웃 후 홈페이지로 리다이렉션
-      window.location.href = "/";
+      // 인증 상태는 authApi.logout()에서 이벤트를 발생시키므로 자동으로 업데이트됨
     } catch (error) {
       console.error("로그아웃 실패:", error);
     }

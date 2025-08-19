@@ -6,11 +6,57 @@ export const authApi = {
   login: async (credentials) => {
     const response = await api.post("/api/v1/users/login", credentials);
 
+    console.log("로그인 응답:", response); // 디버깅용
+    console.log("응답 타입:", typeof response);
+    console.log("응답 키들:", Object.keys(response || {}));
+
     // 토큰을 로컬 스토리지에 저장
     if (response.access_token) {
       localStorage.setItem("authToken", response.access_token);
       localStorage.setItem("refreshToken", response.refresh_token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+
+      // 사용자 정보가 있는지 확인 후 저장 (다양한 응답 구조 대응)
+      let userInfo = null;
+
+      if (response.user && typeof response.user === "object") {
+        userInfo = response.user;
+        console.log("response.user에서 사용자 정보 발견:", userInfo);
+      } else if (
+        response.data &&
+        response.data.user &&
+        typeof response.data.user === "object"
+      ) {
+        userInfo = response.data.user;
+        console.log("response.data.user에서 사용자 정보 발견:", userInfo);
+      } else if (response.username || response.email || response.user_id) {
+        // 사용자 정보가 응답 루트에 직접 있는 경우
+        userInfo = {
+          id: response.user_id || response.id || 1,
+          username: response.username || credentials.username || "사용자",
+          email: response.email || credentials.email || "",
+        };
+        console.log("응답 루트에서 사용자 정보 구성:", userInfo);
+      } else {
+        console.warn("사용자 정보가 응답에 없습니다. 기본값 사용");
+        // 기본 사용자 정보 생성
+        userInfo = {
+          id: 1,
+          username:
+            credentials.username ||
+            credentials.email?.split("@")[0] ||
+            "사용자",
+          email: credentials.email || "",
+        };
+        console.log("기본 사용자 정보 생성:", userInfo);
+      }
+
+      if (userInfo) {
+        localStorage.setItem("user", JSON.stringify(userInfo));
+        console.log("사용자 정보 저장 완료:", userInfo);
+      }
+
+      // 인증 상태 변경 이벤트 발생
+      window.dispatchEvent(new Event("authStateChanged"));
     }
 
     return response;
@@ -28,6 +74,11 @@ export const authApi = {
       localStorage.removeItem("authToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
+
+      console.log("로그아웃 완료, localStorage 정리됨");
+
+      // 인증 상태 변경 이벤트 발생
+      window.dispatchEvent(new Event("authStateChanged"));
     }
   },
 
@@ -114,21 +165,23 @@ export const authApi = {
   // 로그인 상태 확인
   checkAuthStatus: () => {
     const token = localStorage.getItem("authToken");
-    const user = localStorage.getItem("user");
+    const userString = localStorage.getItem("user");
+
+    let user = null;
+    if (userString && userString !== "undefined" && userString !== "null") {
+      try {
+        user = JSON.parse(userString);
+      } catch (error) {
+        console.error("Failed to parse user data:", error);
+        console.error("User string value:", userString);
+        localStorage.removeItem("user");
+        user = null;
+      }
+    }
 
     return {
       isAuthenticated: !!token,
-      user: user
-        ? (() => {
-            try {
-              return JSON.parse(user);
-            } catch (error) {
-              console.error("Failed to parse user data:", error);
-              localStorage.removeItem("user");
-              return null;
-            }
-          })()
-        : null,
+      user,
       token,
     };
   },

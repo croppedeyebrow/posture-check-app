@@ -10,6 +10,33 @@ export async function exportPDF({
   formatDate,
   language = "ko",
 }) {
+  // 기본 함수들 제공 (전달되지 않은 경우)
+  const defaultGetScoreStatus = (score) => {
+    if (score >= 90) return { text: "완벽", color: "excellent" };
+    if (score >= 60) return { text: "좋음", color: "good" };
+    if (score >= 50) return { text: "보통", color: "average" };
+    return { text: "나쁨", color: "poor" };
+  };
+
+  const defaultFormatDate = (timestamp) => {
+    const localeMap = {
+      ko: "ko-KR",
+      en: "en-US",
+      ja: "ja-JP",
+    };
+    const locale = localeMap[language] || "ko-KR";
+    return new Date(timestamp).toLocaleString(locale, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // 함수가 전달되지 않은 경우 기본 함수 사용
+  const safeGetScoreStatus = getScoreStatus || defaultGetScoreStatus;
+  const safeFormatDate = formatDate || defaultFormatDate;
   // PDF 문서 생성 (가로 방향)
   const doc = new jsPDF("landscape", "mm", "a4");
 
@@ -186,11 +213,21 @@ export async function exportPDF({
     .reverse()
     .slice(0, 20) // 최근 20개만 표시 (PDF 공간 제약)
     .map((record) => {
-      const status = getScoreStatus(record.score);
-      const feedback = record.issues ? record.issues.join("; ") : "";
+      const status = safeGetScoreStatus(record.score);
+      // issues가 배열인지 확인하고 안전하게 처리
+      let feedback = "";
+      if (record.issues) {
+        if (Array.isArray(record.issues)) {
+          feedback = record.issues.join("; ");
+        } else if (typeof record.issues === "string") {
+          feedback = record.issues;
+        } else if (typeof record.issues === "object") {
+          feedback = JSON.stringify(record.issues);
+        }
+      }
 
       return [
-        formatDate(record.timestamp),
+        safeFormatDate(record.timestamp),
         record.score,
         status.text,
         record.neckAngle,

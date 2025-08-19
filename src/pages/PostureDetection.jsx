@@ -51,7 +51,7 @@ const PostureDetection = () => {
   // 자세 데이터 저장 함수
   const handlePostureDataSave = useCallback(async (postureData) => {
     try {
-      // 자세 측정 데이터 저장
+      // 자세 측정 데이터 저장 (postureApi에서 자동으로 현재 사용자 ID 사용)
       const savedData = await apiHelpers.saveAndSyncPostureData({
         score: postureData.score,
         neckAngle: postureData.neckAngle,
@@ -65,7 +65,6 @@ const PostureDetection = () => {
         shoulderForwardMovement: postureData.shoulderForwardMovement,
         issues: postureData.issues || [],
         timestamp: new Date().toISOString(),
-        userId: 1, // 기본값 1, 실제로는 로그인된 사용자 ID 사용
       });
 
       console.log("자세 데이터 저장 완료:", savedData);

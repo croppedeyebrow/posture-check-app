@@ -41,8 +41,16 @@ const PostureData = () => {
   const [endDate, setEndDate] = useState(null);
 
   // 커스텀 훅들 사용
-  const { filteredHistory, stats, timeFilter, applyTimeFilter, clearData } =
-    usePostureData();
+  const {
+    filteredHistory,
+    stats,
+    timeFilter,
+    loading,
+    error,
+    applyTimeFilter,
+    clearData,
+    loadPostureHistory,
+  } = usePostureData();
 
   const { prepareChartData, preparePieChartData, prepareMetricsChartData } =
     useChartData();
@@ -114,8 +122,15 @@ const PostureData = () => {
 
   // PDF 데이터 내보내기
   const handleExportPdf = useCallback(() => {
-    exportPDF(filteredHistory, stats, startDate, endDate, t, i18n.language);
-  }, [filteredHistory, stats, startDate, endDate, t, i18n.language]);
+    exportPDF({
+      filteredHistory,
+      stats,
+      t,
+      getScoreStatus,
+      formatDate,
+      language: i18n.language,
+    });
+  }, [filteredHistory, stats, t, getScoreStatus, formatDate, i18n.language]);
 
   return (
     <DataContainer>
@@ -165,8 +180,38 @@ const PostureData = () => {
         </div>
       </FilterContainer>
 
+      {/* 로딩 상태 */}
+      {loading && (
+        <EmptyState>
+          <h3>데이터를 불러오는 중...</h3>
+          <p>잠시만 기다려주세요.</p>
+        </EmptyState>
+      )}
+
+      {/* 에러 상태 */}
+      {error && !loading && (
+        <EmptyState>
+          <h3>데이터 로드 실패</h3>
+          <p>{error}</p>
+          <button
+            onClick={loadPostureHistory}
+            style={{
+              marginTop: "1rem",
+              padding: "0.5rem 1rem",
+              backgroundColor: "#667eea",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+          >
+            다시 시도
+          </button>
+        </EmptyState>
+      )}
+
       {/* 통계 카드 */}
-      {stats ? (
+      {stats && !loading && !error ? (
         <StatsGrid>
           <StatCard $isGood={parseFloat(stats.avgScore) >= 60}>
             <StatLabel>{t("data.stats.averageScore")}</StatLabel>
@@ -214,15 +259,15 @@ const PostureData = () => {
             <StatValue>{stats.maxScore}점</StatValue>
           </StatCard>
         </StatsGrid>
-      ) : (
+      ) : !loading && !error ? (
         <EmptyState>
           <h3>{t("data.export.noData")}</h3>
           <p>{t("data.export.noDataMessage")}</p>
         </EmptyState>
-      )}
+      ) : null}
 
       {/* 차트 컨테이너 */}
-      {rechartsLoaded && (
+      {rechartsLoaded && !loading && !error && (
         <ChartContainer>
           <h3>{t("data.chart.scoreTrend")}</h3>
           <ScoreChart
@@ -280,7 +325,7 @@ const PostureData = () => {
           </div>
         </HistoryHeader>
 
-        {isHistoryExpanded && (
+        {isHistoryExpanded && !loading && !error && (
           <>
             {filteredByDate.length === 0 ? (
               <EmptyState>

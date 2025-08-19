@@ -1,13 +1,22 @@
 import api from "./index.js";
+import { authApi } from "./authApi.js";
 
 // 자세 데이터 관련 API
 export const postureApi = {
   // 자세 데이터 저장
   savePostureData: async (postureData) => {
+    // 현재 로그인한 사용자 정보 가져오기
+    const authStatus = authApi.checkAuthStatus();
+    const currentUserId = authStatus.user?.id || authStatus.user?.user_id;
+
+    if (!currentUserId) {
+      throw new Error("로그인이 필요합니다. 자세 데이터를 저장할 수 없습니다.");
+    }
+
     // 프론트엔드 데이터를 그대로 전송 (백엔드에서 변환 처리)
     const backendData = {
-      // user_id를 데이터에 포함
-      userId: postureData.userId || 1, // 기본값 1, 실제로는 로그인된 사용자 ID 사용
+      // 현재 로그인한 사용자 ID 사용
+      userId: currentUserId,
 
       // 프론트엔드 원본 필드명 그대로 사용
       neckAngle: postureData.neckAngle,
@@ -27,15 +36,24 @@ export const postureApi = {
 
     // 디버깅을 위해 전송할 데이터 출력
     console.log("전송할 자세 데이터:", backendData);
+    console.log("현재 사용자 ID:", currentUserId);
 
     return await api.post(`/api/v1/posture/save`, backendData);
   },
 
   // 자세 데이터 목록 조회
   getPostureHistory: async (params = {}) => {
-    // user_id가 없으면 기본값 추가
+    // 현재 로그인한 사용자 정보 가져오기
+    const authStatus = authApi.checkAuthStatus();
+    const currentUserId = authStatus.user?.id || authStatus.user?.user_id;
+
+    if (!currentUserId) {
+      throw new Error("로그인이 필요합니다. 자세 데이터를 조회할 수 없습니다.");
+    }
+
+    // user_id가 없으면 현재 로그인한 사용자 ID 사용
     if (!params.user_id) {
-      params.user_id = 1; // 기본값 1, 실제로는 로그인된 사용자 ID 사용
+      params.user_id = currentUserId;
     }
 
     const queryString = new URLSearchParams(params).toString();
@@ -56,9 +74,17 @@ export const postureApi = {
 
   // 자세 통계 조회
   getPostureStats: async (params = {}) => {
-    // user_id가 없으면 기본값 추가
+    // 현재 로그인한 사용자 정보 가져오기
+    const authStatus = authApi.checkAuthStatus();
+    const currentUserId = authStatus.user?.id || authStatus.user?.user_id;
+
+    if (!currentUserId) {
+      throw new Error("로그인이 필요합니다. 자세 통계를 조회할 수 없습니다.");
+    }
+
+    // user_id가 없으면 현재 로그인한 사용자 ID 사용
     if (!params.user_id) {
-      params.user_id = 1; // 기본값 1, 실제로는 로그인된 사용자 ID 사용
+      params.user_id = currentUserId;
     }
 
     const queryString = new URLSearchParams(params).toString();
