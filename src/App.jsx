@@ -11,6 +11,7 @@ import GoogleAnalytics from "./components/GoogleAnalytics";
 import Header from "./components/layout/Header";
 import LanguageSelector from "./components/common/LanguageSelector";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import ApiStatusChecker from "./components/common/ApiStatusChecker";
 import Home from "./pages/Home";
 import PostureDetection from "./pages/PostureDetection";
 import PostureData from "./pages/PostureData";
@@ -27,6 +28,7 @@ function AppContent() {
     <>
       {!isAuthPage && <Header />}
       {!isAuthPage && <LanguageSelector />}
+      <ApiStatusChecker />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route
