@@ -1,17 +1,3 @@
-// API 기본 설정
-const getApiBaseUrl = () => {
-  // 환경 변수에서 백엔드 타입 확인 (docker 또는 local)
-  const backendType = import.meta.env.VITE_BACKEND_TYPE || "docker";
-
-  if (backendType === "local") {
-    return import.meta.env.VITE_LOCAL_API_URL || "http://localhost:8001";
-  } else {
-    return import.meta.env.VITE_DOCKER_API_URL || "http://localhost:8000";
-  }
-};
-
-const API_BASE_URL = getApiBaseUrl();
-
 // 공통 헤더 설정
 const getHeaders = () => {
   const token = localStorage.getItem("authToken");
@@ -49,8 +35,10 @@ const handleApiError = (error) => {
         throw new Error(data?.message || "알 수 없는 오류가 발생했습니다.");
     }
   } else if (error.request) {
-    // 네트워크 오류
-    throw new Error("네트워크 연결을 확인해주세요.");
+    // 네트워크 오류 - 백엔드 서버가 실행되지 않았을 가능성
+    throw new Error(
+      "백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요."
+    );
   } else {
     // 기타 오류
     throw new Error("알 수 없는 오류가 발생했습니다.");
@@ -59,28 +47,37 @@ const handleApiError = (error) => {
 
 // 공통 API 요청 함수
 const apiRequest = async (endpoint, options = {}) => {
-  try {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: getHeaders(),
-      ...options,
-    };
+  const servers = ["http://localhost:8000", "http://localhost:8001"];
 
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      const error = new Error("API request failed");
-      error.response = {
-        status: response.status,
-        data: await response.json().catch(() => ({})),
+  for (const server of servers) {
+    try {
+      const url = `${server}${endpoint}`;
+      const config = {
+        headers: getHeaders(),
+        ...options,
       };
-      throw error;
-    }
 
-    return await response.json();
-  } catch (error) {
-    handleApiError(error);
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        const error = new Error("API request failed");
+        error.response = {
+          status: response.status,
+          data: await response.json().catch(() => ({})),
+        };
+        throw error;
+      }
+
+      console.log(`백엔드 서버 연결 성공: ${server}`);
+      return await response.json();
+    } catch {
+      console.log(`서버 ${server} 연결 실패, 다른 서버 시도...`);
+      continue; // 다음 서버로 시도
+    }
   }
+
+  // 모든 서버 연결 실패
+  handleApiError(new Error("모든 백엔드 서버에 연결할 수 없습니다."));
 };
 
 // HTTP 메서드별 함수들
