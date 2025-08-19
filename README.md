@@ -64,7 +64,7 @@ npx vercel --prod
 
 ## 🔧 백엔드 설정
 
-### 환경 변수 설정
+### 로컬 개발 환경 설정
 
 프로젝트 루트에 `.env.local` 파일을 생성하고 다음 설정을 추가하세요:
 
@@ -82,6 +82,18 @@ VITE_LOCAL_API_URL=http://localhost:8001
 VITE_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
+### 배포 환경 설정
+
+Vercel에 배포할 때는 다음 환경 변수를 설정해야 합니다:
+
+1. **Vercel 대시보드** → **Settings** → **Environment Variables**
+2. 다음 변수 추가:
+   ```
+   Name: VITE_PRODUCTION_API_URL
+   Value: https://your-backend-domain.com
+   Environment: Production
+   ```
+
 ### 백엔드 설정 방법
 
 환경 변수로 백엔드 타입을 설정하면 자동으로 해당 백엔드로 연결됩니다.
@@ -97,10 +109,49 @@ VITE_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
 # 도커 백엔드 사용 시
 VITE_BACKEND_TYPE=docker
 VITE_DOCKER_API_URL=http://localhost:8000
+```
 
 # 로컬 백엔드 사용 시
 VITE_BACKEND_TYPE=local
 VITE_LOCAL_API_URL=http://localhost:8001
+```
+
+## 🚀 배포 가이드
+
+### Vercel 배포 시 주의사항
+
+1. **환경 변수 설정 필수**: `VITE_PRODUCTION_API_URL`을 반드시 설정해야 합니다.
+2. **백엔드 서버 배포**: FastAPI 백엔드도 별도로 배포해야 합니다.
+3. **CORS 설정**: 백엔드에서 프론트엔드 도메인을 허용하도록 설정해야 합니다.
+
+### 백엔드 서버 배포 옵션
+
+- **Vercel**: FastAPI 백엔드를 Vercel에 배포
+- **Railway**: 간단한 배포, PostgreSQL 제공
+- **Render**: 무료 플랜, 자동 배포 지원
+- **Heroku**: 안정적인 서비스 (유료)
+
+### 문제 해결
+
+#### "모든 백엔드 서버에 연결할 수 없습니다" 오류
+1. `VITE_PRODUCTION_API_URL` 환경 변수가 설정되었는지 확인
+2. 백엔드 서버가 정상적으로 실행되는지 확인
+3. CORS 설정이 올바른지 확인
+
+#### CORS 오류 발생 시
+백엔드에서 프론트엔드 도메인을 허용하도록 설정:
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-frontend-domain.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
 ```
 
 ## 🔍 주요 기능

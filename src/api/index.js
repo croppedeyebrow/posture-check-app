@@ -7,6 +7,37 @@ const getHeaders = () => {
   };
 };
 
+// 백엔드 서버 URL 설정
+const getBackendUrls = () => {
+  // 환경 변수에서 백엔드 URL 가져오기
+  const dockerUrl = import.meta.env.VITE_DOCKER_API_URL;
+  const localUrl = import.meta.env.VITE_LOCAL_API_URL;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
+  // 배포 환경에서는 실제 백엔드 서버 URL 사용
+  if (import.meta.env.PROD) {
+    // 프로덕션 환경에서는 실제 백엔드 서버 URL을 사용
+    // 예: https://your-backend-domain.com
+    const productionUrl = import.meta.env.VITE_PRODUCTION_API_URL;
+    if (productionUrl) {
+      return [productionUrl];
+    }
+  }
+
+  // 개발 환경에서는 로컬 서버들 사용
+  const urls = [];
+  if (dockerUrl) urls.push(dockerUrl);
+  if (localUrl) urls.push(localUrl);
+  if (baseUrl) urls.push(baseUrl);
+
+  // 기본값으로 localhost 서버들 추가
+  if (urls.length === 0) {
+    urls.push("http://localhost:8000", "http://localhost:8001");
+  }
+
+  return urls;
+};
+
 // 공통 에러 처리
 const handleApiError = (error) => {
   console.error("API Error:", error);
@@ -47,7 +78,7 @@ const handleApiError = (error) => {
 
 // 공통 API 요청 함수
 const apiRequest = async (endpoint, options = {}) => {
-  const servers = ["http://localhost:8000", "http://localhost:8001"];
+  const servers = getBackendUrls();
 
   for (const server of servers) {
     try {
