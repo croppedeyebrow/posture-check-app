@@ -13,12 +13,16 @@ const getBackendUrls = () => {
   const dockerUrl = import.meta.env.VITE_DOCKER_API_URL;
   const localUrl = import.meta.env.VITE_LOCAL_API_URL;
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  const productionUrl = import.meta.env.VITE_PRODUCTION_API_URL;
 
   // 배포 환경에서는 실제 백엔드 서버 URL 사용
   if (import.meta.env.PROD) {
     // 프로덕션 환경에서는 실제 백엔드 서버 URL을 사용
-    // 예: https://your-backend-domain.com
-    const productionUrl = import.meta.env.VITE_PRODUCTION_API_URL;
+    // VITE_API_BASE_URL을 우선적으로 사용
+    if (baseUrl) {
+      return [baseUrl];
+    }
+    // VITE_PRODUCTION_API_URL을 대안으로 사용
     if (productionUrl) {
       return [productionUrl];
     }
