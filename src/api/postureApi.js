@@ -32,6 +32,7 @@ export const postureApi = {
       issues: postureData.issues,
       sessionId: postureData.sessionId || `session_${Date.now()}`,
       deviceInfo: postureData.deviceInfo || navigator.userAgent,
+      timestamp: postureData.timestamp || new Date().toISOString(),
     };
 
     // 디버깅을 위해 전송할 데이터 출력
