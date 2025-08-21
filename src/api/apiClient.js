@@ -37,6 +37,7 @@ export const apiHelpers = {
       const newRecord = {
         ...postureData,
         id: Date.now(),
+        sessionId: postureData.sessionId || String(Date.now()),
         timestamp: new Date().toISOString(),
       };
       localHistory.push(newRecord);

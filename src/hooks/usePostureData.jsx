@@ -46,7 +46,7 @@ const usePostureData = () => {
           item.shoulder_forward_movement || item.shoulderForwardMovement || 0,
         headRotation: item.head_rotation || item.headRotation || 0,
         issues: item.issues || [],
-        sessionId: item.session_id || item.sessionId || "",
+        sessionId: item.session_id || item.sessionId || String(Date.now()),
         deviceInfo: item.device_info || item.deviceInfo || "",
       }));
 

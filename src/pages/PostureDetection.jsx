@@ -45,33 +45,38 @@ const PostureDetection = () => {
   );
   const [postureData, setPostureData] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
 
   const animationFrameRef = useRef(null);
 
   // 자세 데이터 저장 함수
-  const handlePostureDataSave = useCallback(async (postureData) => {
-    try {
-      // 자세 측정 데이터 저장 (postureApi에서 자동으로 현재 사용자 ID 사용)
-      const savedData = await apiHelpers.saveAndSyncPostureData({
-        score: postureData.score,
-        neckAngle: postureData.neckAngle,
-        shoulderSlope: postureData.shoulderSlope,
-        headForward: postureData.headForward,
-        shoulderHeightDiff: postureData.shoulderHeightDiff,
-        cervicalLordosis: postureData.cervicalLordosis,
-        forwardHeadDistance: postureData.forwardHeadDistance,
-        headTilt: postureData.headTilt,
-        headRotation: postureData.headRotation,
-        shoulderForwardMovement: postureData.shoulderForwardMovement,
-        issues: postureData.issues || [],
-        timestamp: new Date().toISOString(),
-      });
+  const handlePostureDataSave = useCallback(
+    async (postureData) => {
+      try {
+        // 자세 측정 데이터 저장 (postureApi에서 자동으로 현재 사용자 ID 사용)
+        const savedData = await apiHelpers.saveAndSyncPostureData({
+          score: postureData.score,
+          neckAngle: postureData.neckAngle,
+          shoulderSlope: postureData.shoulderSlope,
+          headForward: postureData.headForward,
+          shoulderHeightDiff: postureData.shoulderHeightDiff,
+          cervicalLordosis: postureData.cervicalLordosis,
+          forwardHeadDistance: postureData.forwardHeadDistance,
+          headTilt: postureData.headTilt,
+          headRotation: postureData.headRotation,
+          shoulderForwardMovement: postureData.shoulderForwardMovement,
+          issues: postureData.issues || [],
+          sessionId: currentSessionId,
+          timestamp: new Date().toISOString(),
+        });
 
-      console.log("자세 데이터 저장 완료:", savedData);
-    } catch (error) {
-      console.error("자세 데이터 저장 실패:", error);
-    }
-  }, []);
+        console.log("자세 데이터 저장 완료:", savedData);
+      } catch (error) {
+        console.error("자세 데이터 저장 실패:", error);
+      }
+    },
+    [currentSessionId]
+  );
 
   // 커스텀 훅들 사용
   const { mediaPipeRef, poseRef, initializePose, cleanupPose, processFrame } =
@@ -151,11 +156,16 @@ const PostureDetection = () => {
         await Notification.requestPermission();
       }
 
+      // 새로운 세션 ID 생성 (String으로)
+      const newSessionId = String(Date.now());
+      setCurrentSessionId(newSessionId);
+
       await initializePose(onPoseResults);
       setIsDetecting(true);
       startWebcam();
       trackPostureAnalysis("detection_started", {
         timestamp: new Date().toISOString(),
+        sessionId: newSessionId,
       });
     } catch (error) {
       console.error(t("detection.status.error"), error);
@@ -171,8 +181,11 @@ const PostureDetection = () => {
     }
     trackPostureAnalysis("detection_stopped", {
       timestamp: new Date().toISOString(),
+      sessionId: currentSessionId,
     });
-  }, [stopWebcam]);
+    // 세션 ID 초기화
+    setCurrentSessionId(null);
+  }, [stopWebcam, currentSessionId]);
 
   const processFrameLoop = useCallback(async () => {
     if (webcamRef.current && poseRef.current && isDetecting) {

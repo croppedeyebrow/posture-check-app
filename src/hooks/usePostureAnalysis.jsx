@@ -282,6 +282,7 @@ const usePostureAnalysis = () => {
         shoulderHeightDiff,
         score,
         timestamp: Date.now(),
+        sessionId: String(Date.now()),
         cervicalLordosis,
         forwardHeadDistance,
         headTilt,
