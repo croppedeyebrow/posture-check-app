@@ -34,9 +34,18 @@ const getBackendUrls = () => {
   if (localUrl) urls.push(localUrl);
   if (baseUrl) urls.push(baseUrl);
 
-  // 기본값으로 localhost 서버들 추가
+  // 개발 환경에서 환경 변수가 설정되지 않은 경우 기본값 추가
   if (urls.length === 0) {
     urls.push("http://localhost:8000", "http://localhost:8001");
+  } else {
+    // 환경 변수가 설정되어 있지만 기본 localhost 서버들도 추가
+    // 중복 제거를 위해 확인 후 추가
+    if (!urls.includes("http://localhost:8000")) {
+      urls.push("http://localhost:8000");
+    }
+    if (!urls.includes("http://localhost:8001")) {
+      urls.push("http://localhost:8001");
+    }
   }
 
   return urls;
