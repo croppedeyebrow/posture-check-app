@@ -30,7 +30,7 @@ export const postureApi = {
       shoulderForwardMovement: postureData.shoulderForwardMovement,
       headRotation: postureData.headRotation,
       issues: postureData.issues,
-      sessionId: postureData.sessionId || `session_${Date.now()}`,
+      sessionId: postureData.sessionId || Date.now(),
       deviceInfo: postureData.deviceInfo || navigator.userAgent,
       timestamp: postureData.timestamp || new Date().toISOString(),
     };
