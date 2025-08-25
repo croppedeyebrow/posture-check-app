@@ -121,9 +121,21 @@ const PostureData = () => {
   }, [filteredHistory, startDate, endDate, t, i18n.language]);
 
   // PDF 데이터 내보내기
-  const handleExportPdf = useCallback(() => {
-    exportPDF(filteredHistory, stats, startDate, endDate, t, i18n.language);
-  }, [filteredHistory, stats, startDate, endDate, t, i18n.language]);
+  const handleExportPdf = useCallback(async () => {
+    try {
+      await exportPDF({
+        filteredHistory,
+        stats,
+        t,
+        getScoreStatus,
+        formatDate,
+        language: i18n.language,
+      });
+    } catch (error) {
+      console.error("PDF 내보내기 실패:", error);
+      alert(`PDF 내보내기 실패: ${error.message}`);
+    }
+  }, [filteredHistory, stats, t, getScoreStatus, formatDate, i18n.language]);
 
   return (
     <DataContainer>
